@@ -100,6 +100,11 @@
 !windows/runner/
 !windows/runner/**
 
+# Claude Code Plans (플랜)
+!plans/
+!plans/*.md
+!plans/*.txt
+
 ############################################
 # Explicit Ignore (Blacklist - Overrides Whitelist)
 **/.dart_tool/
