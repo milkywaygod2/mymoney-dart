@@ -1,0 +1,115 @@
+############################################
+# Basically Ignore everything in the project except for Selected folders
+*
+
+############################################
+# Selected folders to keep (Whitelist)
+
+# Git & Project Root
+!.gitignore
+!README.md
+!.metadata
+!analysis_options.yaml
+!pubspec.yaml
+!pubspec.lock
+
+# ClaudeCode (Agent)
+!.claude/
+!.claude/CLAUDE.md
+!.claude/settings.json
+!.claude/commands/
+!.claude/commands/*.md
+
+# Dart/Flutter Source
+!lib/
+!lib/**
+
+# Test
+!test/
+!test/**
+
+# Assets
+!assets/
+!assets/**
+
+# Android
+!android/
+!android/.gitignore
+!android/app/
+!android/app/build.gradle.kts
+!android/app/src/
+!android/app/src/**
+!android/build.gradle.kts
+!android/gradle.properties
+!android/gradlew
+!android/gradlew.bat
+!android/settings.gradle.kts
+!android/gradle/
+!android/gradle/**
+!android/gradle/
+!android/gradle/**
+
+# iOS
+!ios/
+!ios/.gitignore
+!ios/Flutter/
+!ios/Flutter/*.plist
+!ios/Flutter/*.xcconfig
+!ios/Runner/
+!ios/Runner/*.swift
+!ios/Runner/*.h
+!ios/Runner/*.m
+!ios/Runner/*.plist
+!ios/Runner.xcodeproj/
+!ios/Runner.xcodeproj/**
+!ios/Runner.xcworkspace/
+!ios/Runner.xcworkspace/**
+!ios/RunnerTests/
+!ios/RunnerTests/*.swift
+
+# macOS
+!macos/
+!macos/.gitignore
+!macos/Flutter/
+!macos/Flutter/*.xcconfig
+!macos/Flutter/*.swift
+!macos/Runner/
+!macos/Runner/*.swift
+!macos/Runner/*.plist
+!macos/Runner/*.entitlements
+!macos/Runner.xcodeproj/
+!macos/Runner.xcodeproj/**
+!macos/Runner.xcworkspace/
+!macos/Runner.xcworkspace/**
+!macos/RunnerTests/
+!macos/RunnerTests/*.swift
+
+# Web
+!web/
+!web/**
+
+# Windows
+!windows/
+!windows/.gitignore
+!windows/CMakeLists.txt
+!windows/flutter/
+!windows/flutter/CMakeLists.txt
+!windows/flutter/generated_plugin_registrant.cc
+!windows/flutter/generated_plugin_registrant.h
+!windows/flutter/generated_plugins.cmake
+!windows/runner/
+!windows/runner/**
+
+############################################
+# Explicit Ignore (Blacklist - Overrides Whitelist)
+**/.dart_tool/
+**/.idea/
+**/build/
+**/.gradle/
+**/.DS_Store
+**/local.properties
+**/*.iml
+**/flutter_export_environment.sh
+**/Generated.xcconfig
+**/GeneratedPluginRegistrant.*
+**/Pods/
