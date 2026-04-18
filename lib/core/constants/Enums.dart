@@ -26,7 +26,9 @@ enum TransactionStatus {
 enum TransactionSource {
   manual,           // 수동 입력
   ocr,              // OCR 영수증 인식
+  cardApi,          // 카드사 API 연동
   csvImport,        // CSV/Excel 임포트
+  ntsImport,        // 국세청(NTS) 데이터 임포트
   systemSettlement, // 결산 자동 전표 (외환평가, 감가상각 등)
 }
 
@@ -37,6 +39,8 @@ enum Deductibility {
   deductible,         // 손금산입
   deductibleLimited,  // 손금산입(한도) — 접대비 등 한도 초과분 불산입
   nonDeductible,      // 손금불산입 — 벌과금 등
+  incomeInclusion,    // 익금산입 — 세무상 익금에 산입
+  incomeExclusion,    // 익금불산입 — 세무상 익금에서 제외
   bookRespected,      // 장부존중 — 회계=세무 일치 (별도 조정 불필요)
 }
 
