@@ -865,7 +865,54 @@ lib/
 
 ---
 
-## 14. 확장 예약 (구현하지 않되 막히지 않도록)
+## 14. 코딩 컨벤션
+
+> 핵심 원칙: "뇌의 사고 속도를 병목시키는 모든 행위는 적폐."
+> 코드를 보는 즉시 뇌에 정보가 들어와야 한다. IDE 지원과 무관하게 코드 자체의 가독성이 최우선.
+
+### 네이밍
+
+| 대상 | 컨벤션 | 예시 |
+|------|--------|------|
+| 파일명 | PascalCase | `TransactionRepository.dart` |
+| 클래스명 | 도메인 접두사 + PascalCase | `TransactionRepository`, `BalanceSheetPage` |
+| 변수명 | 헝가리안 접두사 + camelCase | `listTransactions`, `mapAccountsByCode` |
+| 메서드명 | 동사 시작 + camelCase | `fetchData()`, `buildFlowCard()` |
+| private | 언더스코어 접두사 | `_selectedStock` |
+
+### 헝가리안 접두사
+
+| 접두사 | 의미 | 예시 |
+|--------|------|------|
+| `list` | List | `listTransactions` |
+| `map` | Map | `mapAccountsByCode` |
+| `set` | Set | `setExpandedIds` |
+| `is/has` | bool | `isActive`, `hasPermission` |
+| `stream` | Stream | `streamPerspective` |
+
+### Dart 린터 예외
+
+```yaml
+# analysis_options.yaml
+linter:
+  rules:
+    file_names: false  # PascalCase 파일명 허용 (가독성 우선)
+```
+
+### 코딩 습관
+
+- 한국어 주석 (what보다 why 중심)
+- 짧은 메서드는 한 줄 축약
+- const 생성자 적극 사용
+- 루프 연산은 build() 밖으로 (BLoC 상태에서 처리)
+- initState/dispose 틀 잡기 (빈 상태여도 명시)
+- 다크 모드 + 초록색 기반 테마
+
+상세: `docs/CODE_STYLE_ANALYSIS.md` 참조
+
+---
+
+## 15. 확장 예약 (구현하지 않되 막히지 않도록)
 
 | 영역 | 예약 사항 |
 |------|-----------|
