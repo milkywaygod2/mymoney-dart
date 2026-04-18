@@ -1,4 +1,3 @@
-import '../models/TypedId.dart';
 import '../models/CurrencyCode.dart';
 
 // ExchangeRate는 Ryan 워크트리에서 동시 작성 중

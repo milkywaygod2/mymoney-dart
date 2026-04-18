@@ -10,7 +10,7 @@ part 'Perspective.freezed.dart';
 /// Perspective(관점) — 거래 풀을 특정 조건으로 필터링하는 렌즈.
 /// "남편 투자 현황", "가족 전체 지출" 등 다차원 필터 조합을 저장.
 @freezed
-class Perspective with _$Perspective {
+abstract class Perspective with _$Perspective {
   const Perspective._();
 
   const factory Perspective({

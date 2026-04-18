@@ -7,7 +7,7 @@ part 'Money.freezed.dart';
 /// 금액 값 객체 — int 기반 정밀 연산, double 사용 금지
 /// amountMinorUnits는 통화의 최소 단위 (KRW: 원, USD: cent)
 @freezed
-class Money with _$Money {
+abstract class Money with _$Money {
   const Money._();
 
   const factory Money({

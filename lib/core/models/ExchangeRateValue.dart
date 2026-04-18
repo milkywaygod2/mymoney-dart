@@ -11,7 +11,7 @@ const int kExchangeRateMultiplier = 1000000;
 /// 환율 값 객체 — int 기반 정밀 연산
 /// rate는 kExchangeRateMultiplier 배율로 저장
 @freezed
-class ExchangeRateValue with _$ExchangeRateValue {
+abstract class ExchangeRateValue with _$ExchangeRateValue {
   const ExchangeRateValue._();
 
   const factory ExchangeRateValue({

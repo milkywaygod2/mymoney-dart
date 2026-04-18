@@ -9,7 +9,7 @@ part 'Account.freezed.dart';
 /// 소유자 지분율 — 공동명의 자산의 지분 배분.
 /// shareRatio: 배율 10000 (33.33% = 3333).
 @freezed
-class OwnerShare with _$OwnerShare {
+abstract class OwnerShare with _$OwnerShare {
   const factory OwnerShare({
     required OwnerId ownerId,
 
@@ -21,7 +21,7 @@ class OwnerShare with _$OwnerShare {
 /// 계정과목 — 돈의 위치/용도를 분류하는 항목. Aggregate Root.
 /// 불변조건 INV-A1~A5를 보호한다.
 @freezed
-class Account with _$Account {
+abstract class Account with _$Account {
   const Account._();
 
   const factory Account({

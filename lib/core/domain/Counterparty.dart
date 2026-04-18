@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../models/TypedId.dart';
-import '../constants/Enums.dart';
 import '../errors/DomainErrors.dart';
 import 'CounterpartyAlias.dart';
 
@@ -16,7 +15,7 @@ enum ConfidenceLevel { unknown, low, medium, high, verified }
 /// Counterparty(거래처) — 거래 상대방 마스터 데이터.
 /// OCR 별칭 매칭, 세무 연동(사업자번호), 특수관계자 판정에 사용.
 @freezed
-class Counterparty with _$Counterparty {
+abstract class Counterparty with _$Counterparty {
   const Counterparty._();
 
   const factory Counterparty._internal({

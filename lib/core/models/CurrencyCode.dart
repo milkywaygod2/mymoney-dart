@@ -2,6 +2,7 @@ import 'dart:math' show pow;
 
 /// ISO 4217 통화 코드 + 최소 단위 소수점 자릿수
 /// 금액은 항상 최소 단위 int로 저장 (KRW: 원, USD: cent)
+// ignore_for_file: constant_identifier_names
 enum CurrencyCode {
   KRW(decimals: 0, symbol: '₩'),
   USD(decimals: 2, symbol: '\$'),

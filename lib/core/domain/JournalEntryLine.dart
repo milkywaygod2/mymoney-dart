@@ -9,7 +9,7 @@ part 'JournalEntryLine.freezed.dart';
 /// 전표 라인 — Transaction(거래)의 복식부기 개별 행.
 /// AR 간 ID 참조만 허용 (Account 직접 참조 금지).
 @freezed
-class JournalEntryLine with _$JournalEntryLine {
+abstract class JournalEntryLine with _$JournalEntryLine {
   const JournalEntryLine._();
 
   const factory JournalEntryLine({

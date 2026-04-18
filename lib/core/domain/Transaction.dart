@@ -11,7 +11,7 @@ part 'Transaction.freezed.dart';
 /// 거래 — 하나의 경제적 사건 단위. Aggregate Root.
 /// 불변조건 INV-T1~T7을 보호한다.
 @freezed
-class Transaction with _$Transaction {
+abstract class Transaction with _$Transaction {
   const Transaction._();
 
   const factory Transaction({
@@ -25,7 +25,7 @@ class Transaction with _$Transaction {
     required TransactionSource source,
     double? confidence,
     PeriodId? periodId,
-    @Default(SyncStatus.localOnly) SyncStatus syncStatus,
+    @Default(SyncStatus.pending) SyncStatus syncStatus,
     required List<JournalEntryLine> listLines,
     @Default([]) List<TagId> listTagIds,
     required DateTime createdAt,
@@ -45,7 +45,7 @@ class Transaction with _$Transaction {
     required List<JournalEntryLine> listLines,
     CounterpartyId? counterpartyId,
     String? counterpartyName,
-    TransactionSource source = TransactionSource.manualInput,
+    TransactionSource source = TransactionSource.manual,
     double? confidence,
     List<TagId>? listTagIds,
   }) {
