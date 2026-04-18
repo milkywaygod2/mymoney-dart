@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../models/TypedId.dart';
 import '../models/CurrencyCode.dart';
+import '../constants/Enums.dart';
 import '../errors/DomainErrors.dart';
 
 part 'Perspective.freezed.dart';
@@ -30,13 +31,13 @@ class Perspective with _$Perspective {
     @Default([]) List<TagId> listTagFilters,
 
     /// 기록 방향 — 정부회계 모드에서 반전
-    @Default('NORMAL') String recordingDirection,
+    @Default(RecordingDirection.normal) RecordingDirection recordingDirection,
 
     /// 기준 통화 (null = 시스템 기본 통화)
     CurrencyCode? baseCurrency,
 
     /// 권한 수준
-    @Default('FULL') String permissionLevel,
+    @Default(PermissionLevel.full) PermissionLevel permissionLevel,
   }) = _Perspective;
 
   // --- 불변조건 검증 ---
@@ -77,5 +78,5 @@ class Perspective with _$Perspective {
   }
 
   /// 정부회계 모드 여부
-  bool get isGovernmentMode => recordingDirection == 'INVERTED';
+  bool get isGovernmentMode => recordingDirection == RecordingDirection.inverted;
 }
