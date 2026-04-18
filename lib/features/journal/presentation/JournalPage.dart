@@ -3,40 +3,107 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/Enums.dart';
 import '../../../core/domain/Transaction.dart';
+import 'FlowCard.dart';
 import 'JournalBloc.dart';
+import 'JournalEvent.dart';
 import 'JournalState.dart';
+import 'TransactionForm.dart';
 
-/// 거래 리스트 페이지 — 기본 리스트 (Flow Card는 Wave 5)
+/// 거래 페이지 — Split View (상단 FlowCard + 하단 리스트)
+/// 데스크톱: 좌우 Master-Detail, 모바일: 상하 Split
 class JournalPage extends StatelessWidget {
   const JournalPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<JournalBloc, JournalState>(
-      builder: (context, state) {
-        if (state.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final isWide = MediaQuery.sizeOf(context).width >= 600;
 
-        if (state.errorMessage != null) {
-          return Center(
-            child: Text(
-              state.errorMessage!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+    return Scaffold(
+      body: BlocBuilder<JournalBloc, JournalState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state.errorMessage != null) {
+            return Center(
+              child: Text(state.errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            );
+          }
+          if (state.listTransactions.isEmpty) {
+            return const Center(child: Text('거래가 없습니다'));
+          }
+
+          // 플랫폼별 적응 레이아웃
+          if (isWide) {
+            return _buildDesktopLayout(context, state);
+          }
+          return _buildMobileLayout(context, state);
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => TransactionForm.show(context),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  /// 데스크톱: 좌 리스트 + 우 FlowCard
+  Widget _buildDesktopLayout(BuildContext context, JournalState state) {
+    return Row(
+      children: [
+        // 좌: 거래 리스트
+        SizedBox(
+          width: 360,
+          child: _buildTransactionList(context, state),
+        ),
+        const VerticalDivider(width: 1),
+        // 우: 선택된 거래의 FlowCard
+        Expanded(
+          child: state.selectedTransaction != null
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: FlowCard(transaction: state.selectedTransaction!),
+                )
+              : const Center(child: Text('거래를 선택하세요')),
+        ),
+      ],
+    );
+  }
+
+  /// 모바일: 상 FlowCard + 하 리스트
+  Widget _buildMobileLayout(BuildContext context, JournalState state) {
+    return Column(
+      children: [
+        // 상: FlowCard (선택된 거래 또는 첫 번째)
+        if (state.selectedTransaction != null || state.listTransactions.isNotEmpty)
+          SizedBox(
+            height: 220,
+            child: SingleChildScrollView(
+              child: FlowCard(
+                transaction: state.selectedTransaction ?? state.listTransactions.first,
+              ),
             ),
-          );
-        }
+          ),
+        const Divider(height: 1),
+        // 하: 거래 리스트
+        Expanded(child: _buildTransactionList(context, state)),
+      ],
+    );
+  }
 
-        if (state.listTransactions.isEmpty) {
-          return const Center(child: Text('거래가 없습니다'));
-        }
-
-        return ListView.builder(
-          itemCount: state.listTransactions.length,
-          itemBuilder: (context, index) {
-            final tx = state.listTransactions[index];
-            return _TransactionTile(transaction: tx);
-          },
+  Widget _buildTransactionList(BuildContext context, JournalState state) {
+    return ListView.builder(
+      itemCount: state.listTransactions.length,
+      itemBuilder: (context, index) {
+        final tx = state.listTransactions[index];
+        final isSelected = state.selectedTransaction?.id == tx.id;
+        return _TransactionTile(
+          transaction: tx,
+          isSelected: isSelected,
+          onTap: () => context.read<JournalBloc>().add(
+                SelectTransaction(id: tx.id),
+              ),
         );
       },
     );
@@ -45,9 +112,11 @@ class JournalPage extends StatelessWidget {
 
 /// 거래 리스트 타일
 class _TransactionTile extends StatelessWidget {
-  const _TransactionTile({required this.transaction});
+  const _TransactionTile({required this.transaction, this.isSelected = false, this.onTap});
 
   final Transaction transaction;
+  final bool isSelected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +135,8 @@ class _TransactionTile extends StatelessWidget {
         .fold<int>(0, (sum, l) => sum + l.baseAmount);
 
     return ListTile(
+      selected: isSelected,
+      onTap: onTap,
       leading: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
