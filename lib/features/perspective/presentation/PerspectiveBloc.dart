@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/domain/Perspective.dart';
 import '../../../core/interfaces/IPerspectiveRepository.dart';
+import '../../../core/models/TypedId.dart';
 import 'PerspectiveEvent.dart';
 import 'PerspectiveState.dart';
 
@@ -44,7 +46,31 @@ class PerspectiveBloc extends Bloc<PerspectiveEvent, PerspectiveState> {
   }
 
   Future<void> _onSaveAsPreset(SaveAsPreset event, Emitter<PerspectiveState> emit) async {
-    // TODO: effectivePerspective를 이름 붙여 저장
+    final effective = state.effectivePerspective;
+    if (effective == null) return;
+
+    // 현재 effectivePerspective를 새 이름으로 복사하여 사용자 프리셋으로 저장
+    // id=0 → insert (신규 프리셋), ownerId는 기존 유지
+    final newPreset = Perspective(
+      id: const PerspectiveId(0),
+      name: event.name,
+      ownerId: effective.ownerId,
+      isSystem: false,
+      mapDimensionFilters: effective.mapDimensionFilters,
+      mapAccountAttributeFilters: effective.mapAccountAttributeFilters,
+      listTagFilters: effective.listTagFilters,
+      recordingDirection: effective.recordingDirection,
+      baseCurrency: effective.baseCurrency,
+      permissionLevel: effective.permissionLevel,
+    );
+
+    emit(state.copyWith(isLoading: true, errorMessage: null));
+    try {
+      await _repository.save(newPreset);
+      add(const LoadPresets());
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
+    }
   }
 
   Future<void> _onDeletePreset(DeletePreset event, Emitter<PerspectiveState> emit) async {

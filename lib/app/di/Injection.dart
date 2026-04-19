@@ -38,7 +38,9 @@ import '../../features/perspective/data/PerspectiveDao.dart';
 import '../../features/perspective/data/PerspectiveRepository.dart';
 import '../../features/perspective/presentation/PerspectiveBloc.dart';
 import '../../features/report/data/ReportQueryService.dart';
+import '../../features/journal/presentation/JournalEvent.dart';
 import '../../features/report/presentation/ReportBloc.dart';
+import '../../features/tax/presentation/TaxEvent.dart';
 import '../../features/report/usecase/GenerateBalanceSheet.dart';
 import '../../features/report/usecase/GenerateIncomeStatement.dart';
 import '../../features/report/usecase/RunSettlement.dart';
@@ -198,42 +200,98 @@ Future<void> configureDependencies() async {
   );
 
   // ─────────────────────────────────────────────
-  // 8. BLoCs (factory: 호출 시마다 새 인스턴스)
+  // 8. BLoCs (singleton: Stream 연결을 위해 단일 인스턴스 유지)
   // ─────────────────────────────────────────────
-  getIt.registerFactory<JournalBloc>(
-    () => JournalBloc(
+  getIt.registerSingleton<JournalBloc>(
+    JournalBloc(
       repository: getIt<ITransactionRepository>(),
       createTransaction: getIt<CreateTransaction>(),
       postTransaction: getIt<PostTransaction>(),
     ),
   );
-  getIt.registerFactory<AccountBloc>(
-    () => AccountBloc(getIt<IAccountRepository>()),
+  getIt.registerSingleton<AccountBloc>(
+    AccountBloc(getIt<IAccountRepository>()),
   );
-  getIt.registerFactory<PerspectiveBloc>(
-    () => PerspectiveBloc(repository: getIt<IPerspectiveRepository>()),
+  getIt.registerSingleton<PerspectiveBloc>(
+    PerspectiveBloc(repository: getIt<IPerspectiveRepository>()),
   );
-  getIt.registerFactory<TaxBloc>(
-    () => TaxBloc(
+  getIt.registerSingleton<TaxBloc>(
+    TaxBloc(
       autoClassifyDeductibility: getIt<AutoClassifyDeductibility>(),
     ),
   );
-  getIt.registerFactory<ReportBloc>(
-    () => ReportBloc(
+  getIt.registerSingleton<ReportBloc>(
+    ReportBloc(
       generateBalanceSheet: getIt<GenerateBalanceSheet>(),
       generateIncomeStatement: getIt<GenerateIncomeStatement>(),
       runSettlement: getIt<RunSettlement>(),
       queryService: getIt<ReportQueryService>(),
     ),
   );
-  getIt.registerFactory<OcrBloc>(
-    () => OcrBloc(
+  getIt.registerSingleton<OcrBloc>(
+    OcrBloc(
       ocrService: getIt<IOcrService>(),
       classificationEngine: getIt<ClassificationEngine>(),
       counterpartyMatcher: getIt<ICounterpartyMatcher>(),
       createTransaction: getIt<CreateTransaction>(),
+      accountRepository: getIt<IAccountRepository>(),
     ),
   );
+
+  // ─────────────────────────────────────────────
+  // 9. BLoC Stream 연결 5경로 (CW 섹션 9.2)
+  // ─────────────────────────────────────────────
+  _connectBlocStreams();
+}
+
+/// BLoC 간 Stream 연결 — singleton 등록 완료 후 1회 호출
+void _connectBlocStreams() {
+  final perspectiveBloc = getIt<PerspectiveBloc>();
+  final journalBloc = getIt<JournalBloc>();
+  final reportBloc = getIt<ReportBloc>();
+  final taxBloc = getIt<TaxBloc>();
+
+  // 1. PerspectiveBloc → JournalBloc (Perspective 변경 → 거래 리필터링)
+  perspectiveBloc.stream.listen((state) {
+    if (state.effectivePerspective != null) {
+      journalBloc.add(const LoadTransactions());
+    }
+  });
+
+  // 2. PerspectiveBloc → ReportBloc (Perspective 변경 → 보고서 갱신)
+  perspectiveBloc.stream.listen((state) {
+    if (state.effectivePerspective != null) {
+      reportBloc.add(LoadDashboard(perspective: state.effectivePerspective));
+    }
+  });
+
+  // 3. PerspectiveBloc → TaxBloc (Perspective 변경 → 미판정 항목 갱신)
+  perspectiveBloc.stream.listen((state) {
+    if (state.effectivePerspective != null) {
+      taxBloc.add(const LoadPendingItems());
+    }
+  });
+
+  // 4. JournalBloc → TaxBloc (TransactionPosted → 세무 자동판정)
+  journalBloc.stream.listen((state) {
+    final posted = state.listTransactions
+        .where((t) => t.status.name == 'posted')
+        .map((t) => t.id)
+        .toList();
+    if (posted.isNotEmpty) {
+      taxBloc.add(RunAutoClassification(
+        listTransactionIds: posted,
+        asOfDate: DateTime.now(),
+      ));
+    }
+  });
+
+  // 5. JournalBloc → ReportBloc (TransactionUpdated → 대시보드 갱신)
+  journalBloc.stream.listen((state) {
+    if (!state.isLoading) {
+      reportBloc.add(const LoadDashboard());
+    }
+  });
 }
 
 /// DB 파일 경로 — getApplicationDocumentsDirectory() 기반
