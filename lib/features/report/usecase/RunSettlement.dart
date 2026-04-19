@@ -304,7 +304,7 @@ class RunSettlement {
                 exchangeRateAtTrade: const Value(1000000),
                 baseCurrency: Value(baseCurrencyName),
                 baseAmount: Value(absAmount),
-                deductibility: const Value('BOOK_RESPECTED'),
+                deductibility: Value(Deductibility.bookRespected.name),
               ),
             );
             // 대변: 외환차익 계정
@@ -318,7 +318,7 @@ class RunSettlement {
                 exchangeRateAtTrade: const Value(1000000),
                 baseCurrency: Value(baseCurrencyName),
                 baseAmount: Value(absAmount),
-                deductibility: const Value('BOOK_RESPECTED'),
+                deductibility: Value(Deductibility.bookRespected.name),
               ),
             );
           } else {
@@ -333,7 +333,7 @@ class RunSettlement {
                 exchangeRateAtTrade: const Value(1000000),
                 baseCurrency: Value(baseCurrencyName),
                 baseAmount: Value(absAmount),
-                deductibility: const Value('BOOK_RESPECTED'),
+                deductibility: Value(Deductibility.bookRespected.name),
               ),
             );
             // 대변: 자산/부채 계정
@@ -347,7 +347,7 @@ class RunSettlement {
                 exchangeRateAtTrade: const Value(1000000),
                 baseCurrency: Value(baseCurrencyName),
                 baseAmount: Value(absAmount),
-                deductibility: const Value('BOOK_RESPECTED'),
+                deductibility: Value(Deductibility.bookRespected.name),
               ),
             );
           }
@@ -458,7 +458,7 @@ class RunSettlement {
               exchangeRateAtTrade: const Value(1000000),
               baseCurrency: const Value('KRW'),
               baseAmount: Value(totalRevenue),
-              deductibility: const Value('BOOK_RESPECTED'),
+              deductibility: Value(Deductibility.bookRespected.name),
             ),
           );
           // 대변: 손익요약 계정
@@ -472,7 +472,7 @@ class RunSettlement {
               exchangeRateAtTrade: const Value(1000000),
               baseCurrency: const Value('KRW'),
               baseAmount: Value(totalRevenue),
-              deductibility: const Value('BOOK_RESPECTED'),
+              deductibility: Value(Deductibility.bookRespected.name),
             ),
           );
         }
@@ -500,7 +500,7 @@ class RunSettlement {
               exchangeRateAtTrade: const Value(1000000),
               baseCurrency: const Value('KRW'),
               baseAmount: Value(totalExpense),
-              deductibility: const Value('BOOK_RESPECTED'),
+              deductibility: Value(Deductibility.bookRespected.name),
             ),
           );
           // 대변: 비용 계정 합계 (EXPENSE path 전체)
@@ -514,7 +514,7 @@ class RunSettlement {
               exchangeRateAtTrade: const Value(1000000),
               baseCurrency: const Value('KRW'),
               baseAmount: Value(totalExpense),
-              deductibility: const Value('BOOK_RESPECTED'),
+              deductibility: Value(Deductibility.bookRespected.name),
             ),
           );
         }
@@ -546,7 +546,7 @@ class RunSettlement {
               exchangeRateAtTrade: const Value(1000000),
               baseCurrency: const Value('KRW'),
               baseAmount: Value(absNetIncome),
-              deductibility: const Value('BOOK_RESPECTED'),
+              deductibility: Value(Deductibility.bookRespected.name),
             ),
           );
           await _db.into(_db.journalEntryLines).insert(
@@ -559,7 +559,7 @@ class RunSettlement {
               exchangeRateAtTrade: const Value(1000000),
               baseCurrency: const Value('KRW'),
               baseAmount: Value(absNetIncome),
-              deductibility: const Value('BOOK_RESPECTED'),
+              deductibility: Value(Deductibility.bookRespected.name),
             ),
           );
         }

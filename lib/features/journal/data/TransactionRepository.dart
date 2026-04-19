@@ -75,7 +75,7 @@ class TransactionRepository implements ITransactionRepository {
         activityTypeOverride: Value(jel.activityTypeOverride?.value),
         ownerIdOverride: Value(jel.ownerIdOverride?.value),
         incomeTypeOverride: Value(jel.incomeTypeOverride?.value),
-        deductibility: Value(jel.deductibility.name.toUpperCase()),
+        deductibility: Value(jel.deductibility.name),
         beneficiaryId: Value(jel.beneficiaryId?.value),
         taxClassification: Value(jel.taxClassification),
         memo: Value(jel.memo),
@@ -146,7 +146,7 @@ class TransactionRepository implements ITransactionRepository {
         incomeTypeOverride: jel.incomeTypeOverride != null
             ? DimensionValueId(jel.incomeTypeOverride!)
             : null,
-        deductibility: Deductibility.values.byName(jel.deductibility.toLowerCase()),
+        deductibility: Deductibility.values.byName(jel.deductibility),
         beneficiaryId: jel.beneficiaryId != null
             ? OwnerId(jel.beneficiaryId!)
             : null,
