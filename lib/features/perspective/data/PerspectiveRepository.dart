@@ -1,8 +1,13 @@
+import 'dart:convert';
+
+import 'package:drift/drift.dart';
+
 import '../../../core/constants/Enums.dart';
 import '../../../core/domain/Perspective.dart' as domain;
 import '../../../core/errors/DomainErrors.dart';
 import '../../../core/interfaces/IPerspectiveRepository.dart';
 import '../../../core/models/TypedId.dart';
+import '../../../infrastructure/database/AppDatabase.dart';
 import 'PerspectiveDao.dart';
 
 /// IPerspectiveRepository 구현체
@@ -31,8 +36,36 @@ class PerspectiveRepository implements IPerspectiveRepository {
 
   @override
   Future<void> save(domain.Perspective perspective) async {
-    // TODO: domain -> Drift Companion 변환 + insert/update
-    throw UnimplementedError('PerspectiveRepository.save');
+    // mapDimensionFilters: Map<String, List<DimensionValueId>> → JSON
+    final mapDimJson = perspective.mapDimensionFilters.map(
+      (k, v) => MapEntry(k, v.map((id) => id.value).toList()),
+    );
+    // mapAccountAttributeFilters: Map<String, List<String>> → JSON
+    final mapAttrJson = perspective.mapAccountAttributeFilters;
+    // listTagFilters: List<TagId> → JSON
+    final listTagJson = perspective.listTagFilters.map((t) => t.value).toList();
+
+    final companion = PerspectivesCompanion(
+      id: perspective.id.value == 0
+          ? const Value.absent()
+          : Value(perspective.id.value),
+      name: Value(perspective.name),
+      ownerId: Value(perspective.ownerId.value),
+      isSystem: Value(perspective.isSystem),
+      dimensionFilters: Value(jsonEncode(mapDimJson)),
+      accountAttributeFilters: Value(jsonEncode(mapAttrJson)),
+      tagFilters: Value(jsonEncode(listTagJson)),
+      recordingDirection: Value(perspective.recordingDirection.name.toUpperCase()),
+      baseCurrency: Value(perspective.baseCurrency?.name),
+      permissionLevel: Value(perspective.permissionLevel.name.toUpperCase()),
+    );
+
+    final existing = await _dao.findById(perspective.id.value);
+    if (existing == null) {
+      await _dao.insertPerspective(companion);
+    } else {
+      await _dao.updatePerspective(companion);
+    }
   }
 
   @override
