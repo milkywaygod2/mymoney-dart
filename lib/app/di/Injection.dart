@@ -266,15 +266,22 @@ void _connectBlocStreams() {
   });
 
   // 4. JournalBloc → TaxBloc (TransactionPosted → 세무 자동판정)
+  // 이전 상태와 비교하여 신규 posted 거래만 처리 — 매 로드마다 전체 재판정 방지
+  var setPrevPostedIds = <int>{};
   journalBloc.stream.listen((state) {
     if (state.isLoading) return;
-    final listPosted = state.listTransactions
+    final setCurrPostedIds = state.listTransactions
         .where((t) => t.status == TransactionStatus.posted)
-        .map((t) => t.id)
-        .toList();
-    if (listPosted.isNotEmpty) {
+        .map((t) => t.id.value)
+        .toSet();
+    final setNewlyPosted = setCurrPostedIds.difference(setPrevPostedIds);
+    setPrevPostedIds = setCurrPostedIds;
+    if (setNewlyPosted.isNotEmpty) {
       taxBloc.add(RunAutoClassification(
-        listTransactionIds: listPosted,
+        listTransactionIds: state.listTransactions
+            .where((t) => setNewlyPosted.contains(t.id.value))
+            .map((t) => t.id)
+            .toList(),
         asOfDate: DateTime.now(),
       ));
     }
