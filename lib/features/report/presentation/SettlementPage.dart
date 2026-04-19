@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../usecase/RunSettlement.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/Enums.dart';
+import '../../../core/interfaces/IAccountRepository.dart';
 import 'ReportBloc.dart';
 
 /// 결산 페이지 — 결산 5단계 프로세스 진입점
@@ -39,7 +41,7 @@ class SettlementPage extends StatelessWidget {
 }
 
 /// 결산 시작 화면
-class _SettlementStartView extends StatelessWidget {
+class _SettlementStartView extends StatefulWidget {
   const _SettlementStartView({
     this.activePeriodId,
     this.errorMessage,
@@ -47,6 +49,33 @@ class _SettlementStartView extends StatelessWidget {
 
   final int? activePeriodId;
   final String? errorMessage;
+
+  @override
+  State<_SettlementStartView> createState() => _SettlementStartViewState();
+}
+
+class _SettlementStartViewState extends State<_SettlementStartView> {
+  /// DB에서 조회된 이익잉여금 계정 ID (null = 미조회 또는 미존재)
+  int? _retainedEarningsAccountId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRetainedEarningsAccount();
+  }
+
+  Future<void> _loadRetainedEarningsAccount() async {
+    final accountRepo = context.read<IAccountRepository>();
+    final listAccounts = await accountRepo.findByDimensionPath(
+      DimensionType.equityType,
+      'EQUITY.RETAINED_EARNINGS',
+    );
+    if (mounted && listAccounts.isNotEmpty) {
+      setState(() {
+        _retainedEarningsAccountId = listAccounts.first.id.value;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,20 +89,20 @@ class _SettlementStartView extends StatelessWidget {
           // 단계 안내 카드
           ..._buildStepCards(context),
           const Spacer(),
-          if (errorMessage != null) ...[
+          if (widget.errorMessage != null) ...[
             Text(
-              errorMessage!,
+              widget.errorMessage!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
             const SizedBox(height: 8),
           ],
           // 결산 실행 버튼 (활성 기간 없으면 비활성)
           FilledButton.icon(
-            onPressed: activePeriodId == null
+            onPressed: widget.activePeriodId == null
                 ? null
                 : () => _confirmAndRun(context),
             icon: const Icon(Icons.calculate),
-            label: activePeriodId == null
+            label: widget.activePeriodId == null
                 ? const Text('기간을 먼저 선택하세요')
                 : const Text('결산 실행'),
           ),
@@ -105,6 +134,15 @@ class _SettlementStartView extends StatelessWidget {
   }
 
   void _confirmAndRun(BuildContext context) {
+    if (_retainedEarningsAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('이익잉여금 계정을 찾을 수 없습니다. 계정과목(EQUITY.RETAINED_EARNINGS)을 먼저 등록해 주세요.'),
+        ),
+      );
+      return;
+    }
+
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
@@ -121,12 +159,11 @@ class _SettlementStartView extends StatelessWidget {
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: retainedEarningsAccountId를 설정에서 조회 (MVP: 하드코딩 0 → 추후 교체)
               context.read<ReportBloc>().add(
                     RunSettlementEvent(
-                      periodId: activePeriodId!,
+                      periodId: widget.activePeriodId!,
                       snapshotDate: DateTime.now(),
-                      retainedEarningsAccountId: 0, // TODO: 이익잉여금 계정 ID 설정 필요
+                      retainedEarningsAccountId: _retainedEarningsAccountId!,
                     ),
                   );
             },

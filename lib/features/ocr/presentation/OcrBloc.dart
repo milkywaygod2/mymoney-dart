@@ -5,6 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/constants/Enums.dart';
 import '../../../core/domain/Transaction.dart';
+import '../../../core/interfaces/IAccountRepository.dart';
 import '../../../core/interfaces/ICounterpartyMatcher.dart';
 import '../../../core/models/CurrencyCode.dart';
 import '../../../core/models/TypedId.dart';
@@ -144,10 +145,12 @@ class OcrBloc extends Bloc<OcrEvent, OcrState> {
     required ClassificationEngine classificationEngine,
     required ICounterpartyMatcher counterpartyMatcher,
     required CreateTransaction createTransaction,
+    required IAccountRepository accountRepository,
   })  : _ocrService = ocrService,
         _classificationEngine = classificationEngine,
         _counterpartyMatcher = counterpartyMatcher,
         _createTransaction = createTransaction,
+        _accountRepository = accountRepository,
         super(const OcrState()) {
     on<CaptureImage>(_onCapture);
     on<ProcessOcr>(_onProcess);
@@ -162,6 +165,7 @@ class OcrBloc extends Bloc<OcrEvent, OcrState> {
   final ClassificationEngine _classificationEngine;
   final ICounterpartyMatcher _counterpartyMatcher;
   final CreateTransaction _createTransaction;
+  final IAccountRepository _accountRepository;
 
   // ---------------------------------------------------------------------------
   // 이벤트 핸들러
@@ -304,9 +308,34 @@ class OcrBloc extends Bloc<OcrEvent, OcrState> {
         );
       }
 
-      // Draft 생성 — KRW 단일 통화, 거래 금액 기반 JEL 2개(차변/대변)
-      // 실제 JEL 구성은 계정과목의 nature에 따라 결정되어야 하나,
-      // OCR에서는 비용(차변)/카드미지급금(대변) 패턴을 기본으로 사용
+      // 대변 계정: LIABILITY.CURRENT.CARD_PAYABLE (카드미지급금) 조회
+      // 미존재 시 LIABILITY.CURRENT 접두사 첫 번째 계정 사용
+      final listPayableAccounts = await _accountRepository.findByDimensionPath(
+        DimensionType.equityType,
+        'LIABILITY.CURRENT.CARD_PAYABLE',
+      );
+      AccountId? creditAccountId;
+      if (listPayableAccounts.isNotEmpty) {
+        creditAccountId = listPayableAccounts.first.id;
+      } else {
+        final listCurrentAccounts = await _accountRepository.findByDimensionPath(
+          DimensionType.equityType,
+          'LIABILITY.CURRENT',
+        );
+        if (listCurrentAccounts.isNotEmpty) {
+          creditAccountId = listCurrentAccounts.first.id;
+        }
+      }
+
+      if (creditAccountId == null) {
+        emit(state.copyWith(
+          phase: OcrPhase.error,
+          errorMessage: '대변 계정(카드미지급금)을 찾을 수 없습니다. 계정과목을 먼저 등록해 주세요.',
+        ));
+        return;
+      }
+
+      // Draft 생성 — 차변(비용 계정) + 대변(카드미지급금) INV-T1/T2 충족
       final amount = parsed.amount ?? 0;
       final draft = await _createTransaction.execute(
         date: parsed.date ?? DateTime.now(),
@@ -321,8 +350,15 @@ class OcrBloc extends Bloc<OcrEvent, OcrState> {
             baseCurrency: CurrencyCode.KRW,
             baseAmount: amount,
           ),
-          // 대변(카드미지급금 등)은 사용자가 리뷰 후 추가하도록 빈 자리 마련
-          // TODO: 카드 미지급금 계정과목 자동 조회 후 대변 JEL 자동 생성
+          JournalEntryLineInput(
+            accountId: creditAccountId,
+            entryType: EntryType.credit,
+            originalAmount: amount,
+            originalCurrency: CurrencyCode.KRW,
+            exchangeRateAtTrade: 1000000,
+            baseCurrency: CurrencyCode.KRW,
+            baseAmount: amount,
+          ),
         ],
         counterpartyId: state.classified?.counterpartyId,
         counterpartyName: parsed.merchantName,
