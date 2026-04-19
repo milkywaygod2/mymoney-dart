@@ -13,11 +13,13 @@ class TransactionWithLines {
   final Transaction tx;
   final List<JournalEntryLine> listLines;
   final List<String> listTagNames;
+  final List<int> listTagIds;
 
   const TransactionWithLines({
     required this.tx,
     required this.listLines,
     this.listTagNames = const [],
+    this.listTagIds = const [],
   });
 }
 
@@ -162,11 +164,14 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
         .get();
     final listTagNames =
         listTagRows.map((row) => row.readTable(tags).name).toList();
+    final listTagIds =
+        listTagRows.map((row) => row.readTable(tags).id).toList();
 
     return TransactionWithLines(
       tx: txRow,
       listLines: listLines,
       listTagNames: listTagNames,
+      listTagIds: listTagIds,
     );
   }
 }

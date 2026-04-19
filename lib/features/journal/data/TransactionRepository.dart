@@ -26,7 +26,7 @@ class TransactionRepository implements ITransactionRepository {
   }) async {
     final listResults = await _dao.findByPeriod(
       periodId.value,
-      status: status?.name,
+      status: status?.name.toUpperCase(),
     );
     return listResults.map(_toDomain).toList();
   }
@@ -84,7 +84,7 @@ class TransactionRepository implements ITransactionRepository {
       return JournalEntryLine(
         id: JournalEntryLineId(jel.id),
         accountId: AccountId(jel.accountId),
-        entryType: EntryType.values.byName(jel.entryType),
+        entryType: EntryType.values.byName(jel.entryType.toLowerCase()),
         originalAmount: jel.originalAmount,
         originalCurrency: CurrencyCode.values.byName(jel.originalCurrency),
         exchangeRateAtTrade: jel.exchangeRateAtTrade,
@@ -99,7 +99,7 @@ class TransactionRepository implements ITransactionRepository {
         incomeTypeOverride: jel.incomeTypeOverride != null
             ? DimensionValueId(jel.incomeTypeOverride!)
             : null,
-        deductibility: Deductibility.values.byName(jel.deductibility),
+        deductibility: Deductibility.values.byName(jel.deductibility.toLowerCase()),
         beneficiaryId: jel.beneficiaryId != null
             ? OwnerId(jel.beneficiaryId!)
             : null,
@@ -112,18 +112,18 @@ class TransactionRepository implements ITransactionRepository {
       id: TransactionId(tx.id),
       date: tx.date,
       description: tx.description,
-      status: TransactionStatus.values.byName(tx.status),
+      status: TransactionStatus.values.byName(tx.status.toLowerCase()),
       voidedBy: tx.voidedBy != null ? TransactionId(tx.voidedBy!) : null,
       counterpartyId: tx.counterpartyId != null
           ? CounterpartyId(tx.counterpartyId!)
           : null,
       counterpartyName: tx.counterpartyName,
-      source: TransactionSource.values.byName(tx.source),
+      source: TransactionSource.values.byName(tx.source.toLowerCase()),
       confidence: tx.confidence,
       periodId: tx.periodId != null ? PeriodId(tx.periodId!) : null,
-      syncStatus: SyncStatus.values.byName(tx.syncStatus),
+      syncStatus: SyncStatus.values.byName(tx.syncStatus.toLowerCase()),
       listLines: listLines,
-      listTagIds: [], // TODO: 태그 ID 변환
+      listTagIds: result.listTagIds.map((id) => TagId(id)).toList(),
       createdAt: tx.createdAt,
       updatedAt: tx.updatedAt,
     );

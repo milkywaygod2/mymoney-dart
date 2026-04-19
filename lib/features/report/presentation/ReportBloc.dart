@@ -70,6 +70,7 @@ class DashboardSummary {
     required this.totalExpense,
     required this.netIncome,
     required this.snapshotDate,
+    this.pendingDraftCount = 0,
   });
 
   /// 순자산 (자산 - 부채)
@@ -80,6 +81,9 @@ class DashboardSummary {
   /// 당기순이익
   final int netIncome;
   final DateTime snapshotDate;
+
+  /// 미확인 Draft 건수 — 대시보드 알림 배너용
+  final int pendingDraftCount;
 }
 
 class ReportState {
@@ -178,10 +182,11 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
         perspective: event.perspective,
       );
 
-      // P/L은 activePeriodId가 있어야 조회 가능
+      // P/L + 미확인 Draft 건수는 activePeriodId가 있어야 조회 가능
       int totalRevenue = 0;
       int totalExpense = 0;
       int netIncome = 0;
+      int pendingDraftCount = 0;
       if (state.activePeriodId != null) {
         final pl = await _generateIncomeStatement.execute(
           periodId: state.activePeriodId!,
@@ -190,6 +195,8 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
         totalRevenue = pl.totalRevenue;
         totalExpense = pl.totalExpense;
         netIncome = pl.netIncome;
+        // 미확인 Draft 건수 조회 — 대시보드 알림 배너용
+        pendingDraftCount = await _queryService.countRemainingDrafts(state.activePeriodId!);
       }
 
       emit(state.copyWith(
@@ -200,6 +207,7 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
           totalExpense: totalExpense,
           netIncome: netIncome,
           snapshotDate: now,
+          pendingDraftCount: pendingDraftCount,
         ),
         balanceSheet: bs,
       ));

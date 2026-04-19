@@ -8995,6 +8995,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ClassificationRulesTable(this);
   late final $FiscalPeriodsTable fiscalPeriods = $FiscalPeriodsTable(this);
   late final $OutboxEntriesTable outboxEntries = $OutboxEntriesTable(this);
+  late final TransactionDao transactionDao = TransactionDao(
+    this as AppDatabase,
+  );
+  late final PerspectiveDao perspectiveDao = PerspectiveDao(
+    this as AppDatabase,
+  );
+  late final CounterpartyDao counterpartyDao = CounterpartyDao(
+    this as AppDatabase,
+  );
+  late final ExchangeRateDao exchangeRateDao = ExchangeRateDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

@@ -1,5 +1,9 @@
 import 'package:drift/drift.dart';
 
+import '../../features/counterparty/data/CounterpartyDao.dart';
+import '../../features/exchange/data/ExchangeRateDao.dart';
+import '../../features/journal/data/TransactionDao.dart';
+import '../../features/perspective/data/PerspectiveDao.dart';
 import 'tables/DimensionValueTable.dart';
 import 'tables/OwnerTable.dart';
 import 'tables/AccountTable.dart';
@@ -37,6 +41,11 @@ part 'AppDatabase.g.dart';
   ClassificationRules,
   FiscalPeriods,
   OutboxEntries,
+], daos: [
+  TransactionDao,
+  PerspectiveDao,
+  CounterpartyDao,
+  ExchangeRateDao,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
