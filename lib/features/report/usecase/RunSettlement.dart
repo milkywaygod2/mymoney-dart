@@ -217,6 +217,17 @@ class RunSettlement {
     DateTime snapshotDate,
   ) async {
     try {
+      // 외환차익/외환차손 계정 ID 사전 조회
+      final fxGainAccountId = await _findAccountIdByPath('REVENUE.FINANCIAL.FX_GAIN');
+      final fxLossAccountId = await _findAccountIdByPath('EXPENSE.FINANCIAL.FX_LOSS');
+      if (fxGainAccountId == null || fxLossAccountId == null) {
+        return const SettlementStepResult(
+          step: SettlementStep.fxRevaluation,
+          isSuccess: false,
+          message: '외환차익/외환차손 계정을 찾을 수 없습니다 — 계정과목 설정 확인 필요',
+        );
+      }
+
       // 기간 내 다통화 JEL 조회
       final listTransactions = await _transactionRepository.findByPeriod(
         PeriodId(periodId),
@@ -260,7 +271,7 @@ class RunSettlement {
       for (final fxResult in listFxResults) {
         if (fxResult.gainLossAmount == 0) continue;
 
-        // 외환 평가 자동전표 삽입 (Drift 직접 삽입 — systemSettlement source)
+        // 외환 평가 자동전표 삽입 (복식 2 JEL — INV-T2 준수)
         await _db.transaction(() async {
           final txId = await _db.into(_db.transactions).insert(
             TransactionsCompanion(
@@ -268,49 +279,75 @@ class RunSettlement {
               description: Value(
                 '외환평가 자동전표 — ${fxResult.originalCurrency.name}/${fxResult.baseCurrency.name}',
               ),
-              status: const Value('posted'),
-              source: const Value('systemSettlement'),
+              status: const Value('POSTED'),
+              source: const Value('SYSTEM_SETTLEMENT'),
               periodId: Value(periodId),
-              syncStatus: const Value('pending'),
+              syncStatus: const Value('PENDING'),
             ),
           );
 
-          // 아키텍처 7.3 방향 결정
-          // isGain=true(이익), nature=Asset  → 차변 자산 / 대변 외환차익
-          // isGain=false(손실), nature=Asset → 차변 외환차손 / 대변 자산
-          // isGain=true(이익), nature=Liab  → 차변 해당부채 / 대변 외환차익
-          // isGain=false(손실), nature=Liab → 차변 외환차손 / 대변 해당부채
           final absAmount = fxResult.gainLossAmount.abs();
+          final baseCurrencyName = fxResult.baseCurrency.name;
 
+          // 아키텍처 7.3 방향 결정 — 복식 2 JEL
+          // isGain=true(이익):  차변 자산/부채계정 / 대변 외환차익
+          // isGain=false(손실): 차변 외환차손    / 대변 자산/부채계정
           if (fxResult.isGain) {
-            // 이익: 자산/부채 계정 차변, 외환차익 대변
-            // (외환차익 계정 ID는 시드 데이터에서 조회 예정 — TODO: 계정 코드 기반 조회)
+            // 차변: 자산/부채 계정
             await _db.into(_db.journalEntryLines).insert(
               JournalEntryLinesCompanion(
                 transactionId: Value(txId),
                 accountId: Value(fxResult.accountId),
-                entryType: const Value('debit'),
+                entryType: const Value('DEBIT'),
                 originalAmount: Value(absAmount),
-                originalCurrency: Value(fxResult.baseCurrency.name),
-                exchangeRateAtTrade: const Value(1000000), // 1:1 (이미 base 통화)
-                baseCurrency: Value(fxResult.baseCurrency.name),
+                originalCurrency: Value(baseCurrencyName),
+                exchangeRateAtTrade: const Value(1000000),
+                baseCurrency: Value(baseCurrencyName),
                 baseAmount: Value(absAmount),
-                deductibility: const Value('bookRespected'),
+                deductibility: const Value('BOOK_RESPECTED'),
+              ),
+            );
+            // 대변: 외환차익 계정
+            await _db.into(_db.journalEntryLines).insert(
+              JournalEntryLinesCompanion(
+                transactionId: Value(txId),
+                accountId: Value(fxGainAccountId),
+                entryType: const Value('CREDIT'),
+                originalAmount: Value(absAmount),
+                originalCurrency: Value(baseCurrencyName),
+                exchangeRateAtTrade: const Value(1000000),
+                baseCurrency: Value(baseCurrencyName),
+                baseAmount: Value(absAmount),
+                deductibility: const Value('BOOK_RESPECTED'),
               ),
             );
           } else {
-            // 손실: 외환차손 차변, 자산/부채 계정 대변
+            // 차변: 외환차손 계정
+            await _db.into(_db.journalEntryLines).insert(
+              JournalEntryLinesCompanion(
+                transactionId: Value(txId),
+                accountId: Value(fxLossAccountId),
+                entryType: const Value('DEBIT'),
+                originalAmount: Value(absAmount),
+                originalCurrency: Value(baseCurrencyName),
+                exchangeRateAtTrade: const Value(1000000),
+                baseCurrency: Value(baseCurrencyName),
+                baseAmount: Value(absAmount),
+                deductibility: const Value('BOOK_RESPECTED'),
+              ),
+            );
+            // 대변: 자산/부채 계정
             await _db.into(_db.journalEntryLines).insert(
               JournalEntryLinesCompanion(
                 transactionId: Value(txId),
                 accountId: Value(fxResult.accountId),
-                entryType: const Value('credit'),
+                entryType: const Value('CREDIT'),
                 originalAmount: Value(absAmount),
-                originalCurrency: Value(fxResult.baseCurrency.name),
+                originalCurrency: Value(baseCurrencyName),
                 exchangeRateAtTrade: const Value(1000000),
-                baseCurrency: Value(fxResult.baseCurrency.name),
+                baseCurrency: Value(baseCurrencyName),
                 baseAmount: Value(absAmount),
-                deductibility: const Value('bookRespected'),
+                deductibility: const Value('BOOK_RESPECTED'),
               ),
             );
           }
@@ -352,6 +389,11 @@ class RunSettlement {
   // ───────────────────────────────────────────────────────────────
   // 4단계: 손익 마감
   // 수익/비용 계정 잔액을 손익요약 계정에 집계 후 이익잉여금 대체
+  // 전표 흐름:
+  //   ① 수익 마감: 차변 수익계정 / 대변 손익요약
+  //   ② 비용 마감: 차변 손익요약 / 대변 비용계정
+  //   ③ 이익잉여금 대체: 차변 손익요약 / 대변 이익잉여금 (이익 시)
+  //                    차변 이익잉여금 / 대변 손익요약 (손실 시)
   // ───────────────────────────────────────────────────────────────
 
   Future<(SettlementStepResult, int)> _step4CloseIncome({
@@ -360,46 +402,157 @@ class RunSettlement {
     required int retainedEarningsAccountId,
   }) async {
     try {
+      // 손익요약 계정 ID 조회
+      final incomeSummaryAccountId =
+          await _findAccountIdByPath('EQUITY.INCOME_SUMMARY');
+      if (incomeSummaryAccountId == null) {
+        return (
+          const SettlementStepResult(
+            step: SettlementStep.closingIncome,
+            isSuccess: false,
+            message: '손익요약 계정을 찾을 수 없습니다 — 계정과목 설정 확인 필요',
+          ),
+          0,
+        );
+      }
+
       final incomeStatement = await _generateIncomeStatement.execute(
         periodId: periodId,
       );
 
+      final totalRevenue = incomeStatement.totalRevenue;
+      final totalExpense = incomeStatement.totalExpense;
       final netIncome = incomeStatement.netIncome;
 
-      // 이익잉여금 대체 전표 생성
-      // 당기순이익 > 0 (이익): 차변 손익요약 / 대변 이익잉여금
-      // 당기순이익 < 0 (손실): 차변 이익잉여금 / 대변 손익요약
       await _db.transaction(() async {
-        final txId = await _db.into(_db.transactions).insert(
-          TransactionsCompanion(
-            date: Value(snapshotDate),
-            description: const Value('손익 마감 — 당기순이익 이익잉여금 대체'),
-            status: const Value('posted'),
-            source: const Value('systemSettlement'),
-            periodId: Value(periodId),
-            syncStatus: const Value('pending'),
-          ),
-        );
+        // ① 수익 마감 전표: 차변 수익계정 / 대변 손익요약
+        if (totalRevenue > 0) {
+          final txRevenueId = await _db.into(_db.transactions).insert(
+            TransactionsCompanion(
+              date: Value(snapshotDate),
+              description: const Value('손익 마감 — 수익계정 마감'),
+              status: const Value('POSTED'),
+              source: const Value('SYSTEM_SETTLEMENT'),
+              periodId: Value(periodId),
+              syncStatus: const Value('PENDING'),
+            ),
+          );
+          // 차변: 수익 계정 합계 (REVENUE path 전체)
+          await _db.into(_db.journalEntryLines).insert(
+            JournalEntryLinesCompanion(
+              transactionId: Value(txRevenueId),
+              accountId: Value(await _findAccountIdByPath('REVENUE') ?? 0),
+              entryType: const Value('DEBIT'),
+              originalAmount: Value(totalRevenue),
+              originalCurrency: const Value('KRW'),
+              exchangeRateAtTrade: const Value(1000000),
+              baseCurrency: const Value('KRW'),
+              baseAmount: Value(totalRevenue),
+              deductibility: const Value('BOOK_RESPECTED'),
+            ),
+          );
+          // 대변: 손익요약 계정
+          await _db.into(_db.journalEntryLines).insert(
+            JournalEntryLinesCompanion(
+              transactionId: Value(txRevenueId),
+              accountId: Value(incomeSummaryAccountId),
+              entryType: const Value('CREDIT'),
+              originalAmount: Value(totalRevenue),
+              originalCurrency: const Value('KRW'),
+              exchangeRateAtTrade: const Value(1000000),
+              baseCurrency: const Value('KRW'),
+              baseAmount: Value(totalRevenue),
+              deductibility: const Value('BOOK_RESPECTED'),
+            ),
+          );
+        }
 
-        final absNetIncome = netIncome.abs();
-        // 이익잉여금 계정 처리 (이익=대변, 손실=차변)
-        final strRetainedEntryType = netIncome >= 0 ? 'credit' : 'debit';
-        // 손익요약 계정 처리 (이익=차변으로 마감, 손실=대변으로 마감)
-        // 참고: 손익요약 계정 ID는 시드에서 조회 예정 (TODO: 계정 코드 기반 조회)
-        // MVP: 이익잉여금 계정에만 단일 JEL 생성 (상대 계정은 수익/비용 각각 마감 전표 필요)
-        await _db.into(_db.journalEntryLines).insert(
-          JournalEntryLinesCompanion(
-            transactionId: Value(txId),
-            accountId: Value(retainedEarningsAccountId),
-            entryType: Value(strRetainedEntryType),
-            originalAmount: Value(absNetIncome),
-            originalCurrency: const Value('KRW'),
-            exchangeRateAtTrade: const Value(1000000),
-            baseCurrency: const Value('KRW'),
-            baseAmount: Value(absNetIncome),
-            deductibility: const Value('bookRespected'),
-          ),
-        );
+        // ② 비용 마감 전표: 차변 손익요약 / 대변 비용계정
+        if (totalExpense > 0) {
+          final txExpenseId = await _db.into(_db.transactions).insert(
+            TransactionsCompanion(
+              date: Value(snapshotDate),
+              description: const Value('손익 마감 — 비용계정 마감'),
+              status: const Value('POSTED'),
+              source: const Value('SYSTEM_SETTLEMENT'),
+              periodId: Value(periodId),
+              syncStatus: const Value('PENDING'),
+            ),
+          );
+          // 차변: 손익요약 계정
+          await _db.into(_db.journalEntryLines).insert(
+            JournalEntryLinesCompanion(
+              transactionId: Value(txExpenseId),
+              accountId: Value(incomeSummaryAccountId),
+              entryType: const Value('DEBIT'),
+              originalAmount: Value(totalExpense),
+              originalCurrency: const Value('KRW'),
+              exchangeRateAtTrade: const Value(1000000),
+              baseCurrency: const Value('KRW'),
+              baseAmount: Value(totalExpense),
+              deductibility: const Value('BOOK_RESPECTED'),
+            ),
+          );
+          // 대변: 비용 계정 합계 (EXPENSE path 전체)
+          await _db.into(_db.journalEntryLines).insert(
+            JournalEntryLinesCompanion(
+              transactionId: Value(txExpenseId),
+              accountId: Value(await _findAccountIdByPath('EXPENSE') ?? 0),
+              entryType: const Value('CREDIT'),
+              originalAmount: Value(totalExpense),
+              originalCurrency: const Value('KRW'),
+              exchangeRateAtTrade: const Value(1000000),
+              baseCurrency: const Value('KRW'),
+              baseAmount: Value(totalExpense),
+              deductibility: const Value('BOOK_RESPECTED'),
+            ),
+          );
+        }
+
+        // ③ 이익잉여금 대체 전표
+        if (netIncome != 0) {
+          final absNetIncome = netIncome.abs();
+          final txClosingId = await _db.into(_db.transactions).insert(
+            TransactionsCompanion(
+              date: Value(snapshotDate),
+              description: const Value('손익 마감 — 당기순이익 이익잉여금 대체'),
+              status: const Value('POSTED'),
+              source: const Value('SYSTEM_SETTLEMENT'),
+              periodId: Value(periodId),
+              syncStatus: const Value('PENDING'),
+            ),
+          );
+          // 이익(netIncome>0): 차변 손익요약 / 대변 이익잉여금
+          // 손실(netIncome<0): 차변 이익잉여금 / 대변 손익요약
+          final strSummaryType = netIncome > 0 ? 'DEBIT' : 'CREDIT';
+          final strRetainedType = netIncome > 0 ? 'CREDIT' : 'DEBIT';
+          await _db.into(_db.journalEntryLines).insert(
+            JournalEntryLinesCompanion(
+              transactionId: Value(txClosingId),
+              accountId: Value(incomeSummaryAccountId),
+              entryType: Value(strSummaryType),
+              originalAmount: Value(absNetIncome),
+              originalCurrency: const Value('KRW'),
+              exchangeRateAtTrade: const Value(1000000),
+              baseCurrency: const Value('KRW'),
+              baseAmount: Value(absNetIncome),
+              deductibility: const Value('BOOK_RESPECTED'),
+            ),
+          );
+          await _db.into(_db.journalEntryLines).insert(
+            JournalEntryLinesCompanion(
+              transactionId: Value(txClosingId),
+              accountId: Value(retainedEarningsAccountId),
+              entryType: Value(strRetainedType),
+              originalAmount: Value(absNetIncome),
+              originalCurrency: const Value('KRW'),
+              exchangeRateAtTrade: const Value(1000000),
+              baseCurrency: const Value('KRW'),
+              baseAmount: Value(absNetIncome),
+              deductibility: const Value('BOOK_RESPECTED'),
+            ),
+          );
+        }
       });
 
       return (
@@ -407,12 +560,12 @@ class RunSettlement {
           step: SettlementStep.closingIncome,
           isSuccess: true,
           message: netIncome >= 0
-              ? '당기순이익 ${netIncome}원 — 이익잉여금 대체 완료'
+              ? '당기순이익 $netIncome원 — 이익잉여금 대체 완료'
               : '당기순손실 ${netIncome.abs()}원 — 이익잉여금 차감 완료',
           details: {
             'netIncome': netIncome,
-            'totalRevenue': incomeStatement.totalRevenue,
-            'totalExpense': incomeStatement.totalExpense,
+            'totalRevenue': totalRevenue,
+            'totalExpense': totalExpense,
           },
         ),
         netIncome,
@@ -427,6 +580,21 @@ class RunSettlement {
         0,
       );
     }
+  }
+
+  // ───────────────────────────────────────────────────────────────
+  // 헬퍼: equityTypePath로 계정 ID 조회
+  // ───────────────────────────────────────────────────────────────
+
+  /// Accounts 테이블에서 equityTypePath가 [path]인 첫 번째 계정 ID를 반환.
+  /// 계정이 없으면 null 반환.
+  Future<int?> _findAccountIdByPath(String path) async {
+    final listRows = await (_db.select(_db.accounts)
+          ..where((a) => a.equityTypePath.equals(path))
+          ..limit(1))
+        .get();
+    if (listRows.isEmpty) return null;
+    return listRows.first.id;
   }
 
   // ───────────────────────────────────────────────────────────────

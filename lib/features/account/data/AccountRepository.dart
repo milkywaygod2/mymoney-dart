@@ -1,7 +1,10 @@
+import 'package:drift/drift.dart';
+
 import '../../../core/interfaces/IAccountRepository.dart';
 import '../../../core/domain/Account.dart';
 import '../../../core/models/TypedId.dart';
 import '../../../core/constants/Enums.dart';
+import '../../../infrastructure/database/AppDatabase.dart' hide Account;
 import 'AccountDao.dart';
 
 /// IAccountRepository 구현체 — AccountDao를 주입받아
@@ -44,12 +47,13 @@ class AccountRepository implements IAccountRepository {
 
   @override
   Future<void> save(Account account) async {
+    final companion = _toCompanion(account);
     // 기존 존재 여부로 INSERT/UPDATE 분기
     final existing = await _dao.findById(account.id.value);
     if (existing == null) {
-      await _dao.insertAccount(_toMap(account));
+      await _dao.insertAccount(companion);
     } else {
-      await _dao.updateAccount(account.id.value, _toMap(account));
+      await _dao.updateAccount(companion);
     }
     // TODO: OwnerShares 별도 테이블 동기화
     // 1. 기존 shares 삭제
@@ -94,28 +98,28 @@ class AccountRepository implements IAccountRepository {
   }
 
   // ---------------------------------------------------------------------------
-  // 도메인 엔티티 → Drift 데이터 변환
+  // 도메인 엔티티 → Drift Companion 변환
   // ---------------------------------------------------------------------------
 
-  /// Account → Map (Drift Companion 확정 전 임시)
-  Map<String, dynamic> _toMap(Account account) {
-    return {
-      'id': account.id.value,
-      'name': account.name,
-      'nature': account.nature.name,
-      'equityTypeId': account.equityTypeId.value,
-      'equityTypePath': account.equityTypePath,
-      'liquidityId': account.liquidityId.value,
-      'liquidityPath': account.liquidityPath,
-      'assetTypeId': account.assetTypeId.value,
-      'assetTypePath': account.assetTypePath,
-      'defaultActivityTypeId': account.defaultActivityTypeId?.value,
-      'defaultIncomeTypeId': account.defaultIncomeTypeId?.value,
-      'ownerId': account.ownerId.value,
-      'productType': account.productType,
-      'financialInstitution': account.financialInstitution,
-      'countrySpecific': account.countrySpecific,
-      'isActive': account.isActive,
-    };
+  /// Account → AccountsCompanion
+  AccountsCompanion _toCompanion(Account account) {
+    return AccountsCompanion(
+      id: Value(account.id.value),
+      name: Value(account.name),
+      nature: Value(account.nature.name.toUpperCase()),
+      equityTypeId: Value(account.equityTypeId.value),
+      equityTypePath: Value(account.equityTypePath),
+      liquidityId: Value(account.liquidityId.value),
+      liquidityPath: Value(account.liquidityPath),
+      assetTypeId: Value(account.assetTypeId.value),
+      assetTypePath: Value(account.assetTypePath),
+      defaultActivityTypeId: Value(account.defaultActivityTypeId?.value),
+      defaultIncomeTypeId: Value(account.defaultIncomeTypeId?.value),
+      ownerId: Value(account.ownerId.value),
+      productType: Value(account.productType),
+      financialInstitution: Value(account.financialInstitution),
+      countrySpecific: Value(account.countrySpecific),
+      isActive: Value(account.isActive),
+    );
   }
 }
