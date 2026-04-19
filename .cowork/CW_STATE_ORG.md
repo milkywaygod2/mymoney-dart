@@ -8,9 +8,9 @@ Phase 7 (실행 — W7 Counterparty+OCR)
 |------|------|------|------|-----------|-----------|
 | 사용자 | (사용자) | - | 활성 | 최상급자 — 최종 승인 | - |
 | 주임급 | team-lead | Opus | 활성 | 총괄 — 의장 겸임, 리뷰/머지 | 사용자 |
-| 사원급 | Arjun-3 | Opus | 활성 | Counterparty+OCR+Classification | team-lead |
-| 사원급 | Grace-3 | Opus | 활성 | ExchangeRate+Report+Settlement | team-lead |
-| 사원급 | Omar-3 | Opus | 활성 | Sync+Auth+인프라+IFRS | team-lead |
+| 사원급 | Arjun-3 | Opus | 활성 | Counterparty+Tax+Classification+스키마(CT) | team-lead |
+| 사원급 | Grace-3 | Opus | 활성 | Report+비율+OCI+기간비교+스키마(FP) | team-lead |
+| 사원급 | Omar-3 | Opus | 활성 | CF+CE+결산훅+스냅샷+스키마(Acct) | team-lead |
 
 ## 퇴역 이력
 | 이름 | 모델 | 퇴역 사유 | 날짜 |
@@ -29,3 +29,4 @@ Phase 7 (실행 — W7 Counterparty+OCR)
 - W0~W6: team-lead 주도 + TF 위원 병렬 (W3부터 team-lead 단독)
 - W7~: mymoney-impl 팀 (Arjun/Grace/Omar) 편성
 - 2026-04-20: Sonnet→Opus 모델 전환 (Arjun→Arjun-3, Grace→Grace-3, Omar→Omar-3)
+- 2026-04-20: Phase 5 재편성 — v2.0 담당 영역 갱신 (인원 변경 없음)
