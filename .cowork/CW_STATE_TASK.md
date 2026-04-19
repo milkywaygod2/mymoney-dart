@@ -1,13 +1,32 @@
 # 태스크 상황판 (CW_STATE_TASK)
 
-> 자동 생성됨 — skill-tfbureaucracy-init-cowork.py
-
-[CURRENT_PHASE: 3]
-
-## 태스크 상황판
-| 파일/모듈 | 태스크 | 상태 | 할당 에이전트(기사) | 종자 | 비고 | 대기열 |
-|-----------|--------|------|---------------------|------|------|--------|
-| - | - | - | - | - | - | - |
+[CURRENT_PHASE: 7]
+[CURRENT_WAVE: 7]
 
 ## 완료 이력
-(없음)
+
+| Wave | Subject | 내용 | 커밋 | 파일 수 |
+|------|---------|------|------|--------|
+| W0 | 스캐폴드 | DI/Router/Theme/4탭 네비게이션 | 16849fb | 5 |
+| W1 | S01 | core/ 엔티티+VO+인터페이스+enum | 73993db | 30 |
+| W2 | S02 | Drift 16테이블+시드+Account CRUD+BLoC | 63ab375 | 25 |
+| W3 | S03a | Transaction DAO/Repo/UseCase/BLoC/Page | c6ceddb | 11 |
+| W4 | S03b+S04 | 역분개/중복탐지/계정 UseCase | fcb01b2 | 4 |
+| W5 | S05 | Flow Card+거래 입력 UI+Split View | 24f0c11 | 3 |
+| W6 | S06 | Perspective+Lens Switcher | fdc0f4d | 9 |
+
+## 태스크 상황판 (W7 이후)
+
+| Wave | Subject | 태스크 | 상태 | 할당 에이전트 | 비고 |
+|------|---------|--------|------|-------------|------|
+| W7 | S07 | Counterparty CRUD + alias | 대기 | - | |
+| W7 | S07 | OCR 파이프라인 (ML Kit) | 대기 | - | 패키지 미설치 |
+| W7 | S07 | ClassificationEngine (로직트리) | 대기 | - | |
+| W8 | S08a | 세무조정 규칙엔진 | 대기 | - | |
+| W8 | S09 | 외환차손익 (다통화) | 대기 | - | |
+| W9 | S08b | 결산 프로세스 5단계 | 대기 | - | |
+| W10 | S10 | 동기화 (Outbox+Delta) | 대기 | - | 서버 API 필요 |
+| W10 | S11 | 인증 (OAuth2+생체) | 대기 | - | 네이티브 설정 필요 |
+
+## 대기열
+(Phase 5 편성 후 배정)

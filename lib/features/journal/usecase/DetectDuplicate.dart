@@ -1,5 +1,4 @@
 import '../../../core/constants/Enums.dart';
-import '../../../core/domain/Transaction.dart';
 import '../../../core/interfaces/ITransactionRepository.dart';
 import '../../../core/models/TypedId.dart';
 
