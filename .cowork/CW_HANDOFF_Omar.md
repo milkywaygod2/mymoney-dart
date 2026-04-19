@@ -1,7 +1,7 @@
 # CW_HANDOFF_Omar.md — Omar 작업 인수인계
 
 > 에이전트: Omar | 담당: Sync(S10) + Auth(S11) + W7 OCR 파이프라인
-> 최종 갱신: 2026-04-19
+> 최종 갱신: 2026-04-19 (W10 S10+S11 stub 완료)
 
 ---
 
@@ -40,18 +40,53 @@
 
 ---
 
-## 대기 중 태스크
+### W10 — 동기화 + 인증 인프라 (S10+S11 stub)
 
-| Subject | 내용 | Wave | 비고 |
-|---------|------|------|------|
-| S10 | 동기화 Outbox + Delta Sync | W10 | 서버 API 필요 |
-| S11 | 인증 OAuth2 + 생체인증 | W10 | 네이티브 설정 필요 |
+| 커밋 | 내용 | 파일 |
+|------|------|------|
+| `6bb5796` | 동기화 + 인증 인프라 stub 구현 | 5파일 신규 |
+
+#### 구현 파일
+- `lib/features/sync/data/ConnectivityMonitor.dart` — 네트워크 상태 감지
+  - `IConnectivityMonitor` abstract interface
+  - `ConnectivityMonitor` stub (connectivity_plus TODO)
+  - `Stream<bool> streamOnline`, `setOnlineForTest()` 테스트 지원
+- `lib/features/sync/data/OutboxProcessor.dart` — Outbox FIFO 처리
+  - `IServerApiClient` 인터페이스 (서버 HTTP 호출 주입용)
+  - `ConflictException` (409 충돌)
+  - `processNext()`: PENDING→SYNCED/CONFLICT/FAILED 상태 전이
+  - `fetchConflicts()` / `resolveConflict()`: 충돌 해소 UI 지원
+- `lib/features/sync/data/SyncService.dart` — 동기화 오케스트레이터
+  - `ISyncService` abstract interface
+  - `triggerSync()`: Outbox 처리 + Delta Sync + 지수 백오프 (1→2→4→8→16s)
+  - `ConnectivityMonitor` 온라인 전환 감지 → 자동 triggerSync()
+  - `SyncResult` VO, `SyncStatus` enum
+- `lib/infrastructure/auth/TokenStorage.dart` — JWT 토큰 저장소
+  - `ITokenStorage` abstract interface
+  - `DevTokenStorage` (인메모리, SharedPreferences TODO)
+  - `SecureTokenStorage` (flutter_secure_storage TODO)
+  - `TokenPair` VO (accessToken, refreshToken, expiresAt, isExpired)
+- `lib/infrastructure/auth/AuthService.dart` — 인증 서비스
+  - `IAuthService` abstract interface
+  - Google/Apple OAuth2 stub (패키지 TODO)
+  - 생체인증/PIN stub (local_auth TODO)
+  - JWT 갱신 흐름 설계 완료 (C# 백엔드 연동 TODO)
+
+#### TODO (패키지 미설치 → stub)
+- `connectivity_plus`: ConnectivityMonitor 실체화
+- `shared_preferences` / `flutter_secure_storage`: TokenStorage 실체화
+- `google_sign_in` + `sign_in_with_apple`: AuthService 소셜 로그인 실체화
+- `local_auth`: 생체인증/PIN 실체화
+- `http`: _exchangeIdToken, refreshToken, signOut 서버 연동
 
 ---
 
-## 의존성 체크
+## 완료 태스크
 
-- S10 착수 조건: S07(OCR), 서버 C# API 준비
-- S11 착수 조건: S06(Perspective 권한 모드)
+| Subject | 내용 | Wave | 상태 |
+|---------|------|------|------|
+| S07 | OCR 파이프라인 + ClassificationEngine | W7 | stub 완료 |
+| S10 | 동기화 Outbox + Delta Sync | W10 | stub 완료 |
+| S11 | 인증 OAuth2 + 생체인증 | W10 | stub 완료 |
 
 워크트리: `E:/_Develop/dart/mymoney-wk-omar` (브랜치: `wk-w7-omar`)
