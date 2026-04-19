@@ -185,7 +185,7 @@ class ReportQueryService {
       '''
       SELECT COUNT(*) AS cnt
       FROM transactions
-      WHERE period_id = ? AND status = 'draft'
+      WHERE period_id = ? AND status = 'DRAFT'
       ''',
       variables: [Variable.withInt(periodId)],
       readsFrom: {_db.transactions},

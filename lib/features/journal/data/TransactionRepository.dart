@@ -52,7 +52,7 @@ class TransactionRepository implements ITransactionRepository {
       voidedBy: Value(transaction.voidedBy?.value),
       counterpartyId: Value(transaction.counterpartyId?.value),
       counterpartyName: Value(transaction.counterpartyName),
-      source: Value(transaction.source.name.toUpperCase()),
+      source: Value(transaction.source.name),
       confidence: Value(transaction.confidence),
       periodId: Value(transaction.periodId?.value),
       syncStatus: Value(transaction.syncStatus.name.toUpperCase()),
@@ -165,7 +165,7 @@ class TransactionRepository implements ITransactionRepository {
           ? CounterpartyId(tx.counterpartyId!)
           : null,
       counterpartyName: tx.counterpartyName,
-      source: TransactionSource.values.byName(tx.source.toLowerCase()),
+      source: TransactionSource.values.byName(tx.source),
       confidence: tx.confidence,
       periodId: tx.periodId != null ? PeriodId(tx.periodId!) : null,
       syncStatus: SyncStatus.values.byName(tx.syncStatus.toLowerCase()),
