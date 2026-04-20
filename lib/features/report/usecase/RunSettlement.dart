@@ -9,14 +9,28 @@ import '../../exchange/usecase/EvaluateUnrealizedFxGain.dart';
 import '../data/ReportQueryService.dart';
 import 'GenerateIncomeStatement.dart';
 
-/// 결산 단계 enum — 5단계 진행 상황 추적
+/// 결산 단계 enum — 코어 5단계 + 플러그인 훅 (v2.0)
 enum SettlementStep {
-  preparingClose,   // 1단계: 마감 준비 (Draft 검증 + 시산표)
-  fxRevaluation,   // 2단계: 외환 평가 자동전표
-  taxAdjustment,   // 3단계: 세무조정
-  closingIncome,   // 4단계: 손익 마감
-  savingSnapshot,  // 5단계: 스냅샷 저장
-  completed,       // 완료
+  preparingClose,     // 1단계: 마감 준비 (Draft 검증 + 시산표)
+  executingPlugins,   // 2단계: 플러그인 훅 순차 실행 (FX/OCI/감가상각 등)
+  taxAdjustment,      // 3단계: 세무조정
+  closingIncome,      // 4단계: 손익 마감
+  savingSnapshot,     // 5단계: 스냅샷 저장 (BS/PL/CF/CE/TAX/RATIO 6종)
+  completed,          // 완료
+}
+
+/// 결산 2단계 플러그인 인터페이스 (v2.0)
+/// 각 플러그인은 order 순서대로 실행되며, 자동전표를 생성한다.
+abstract interface class SettlementPlugin {
+  /// 플러그인 이름 (로그/UI 표시용)
+  String get name;
+  /// 실행 순서 (낮을수록 먼저: FX=10, OCI=20, Depreciation=30, BadDebt=40)
+  int get order;
+  /// 결산 전표 생성 실행
+  Future<SettlementStepResult> execute({
+    required int periodId,
+    required DateTime snapshotDate,
+  });
 }
 
 /// 결산 단계별 결과
@@ -71,12 +85,14 @@ class RunSettlement {
     required ITransactionRepository transactionRepository,
     required IAccountRepository accountRepository,
     required AppDatabase db,
+    List<SettlementPlugin>? listPlugins,
   })  : _queryService = queryService,
         _generateIncomeStatement = generateIncomeStatement,
         _evaluateFxGain = evaluateFxGain,
         _transactionRepository = transactionRepository,
         _accountRepository = accountRepository,
-        _db = db;
+        _db = db,
+        _listPlugins = listPlugins ?? [];
 
   final ReportQueryService _queryService;
   final GenerateIncomeStatement _generateIncomeStatement;
@@ -84,6 +100,8 @@ class RunSettlement {
   final ITransactionRepository _transactionRepository;
   final IAccountRepository _accountRepository;
   final AppDatabase _db;
+  /// v2.0: 결산 2단계 플러그인 리스트 (order 순 정렬하여 실행)
+  final List<SettlementPlugin> _listPlugins;
 
   /// 결산 5단계 실행
   ///
@@ -117,11 +135,25 @@ class RunSettlement {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 2단계: 외환 평가 자동전표 생성
+    // 2단계: 플러그인 훅 순차 실행 (v2.0)
+    // 등록된 플러그인을 order 순으로 실행 (FX→OCI→감가상각→대손충당금)
+    // 플러그인 미등록 시 기존 FX 평가 로직을 폴백으로 실행
     // ─────────────────────────────────────────────────────────────
-    onProgress?.call(SettlementStep.fxRevaluation);
-    final step2 = await _step2FxRevaluation(periodId, snapshotDate);
-    listResults.add(step2);
+    onProgress?.call(SettlementStep.executingPlugins);
+    if (_listPlugins.isNotEmpty) {
+      final listSorted = [..._listPlugins]..sort((a, b) => a.order.compareTo(b.order));
+      for (final plugin in listSorted) {
+        final pluginResult = await plugin.execute(
+          periodId: periodId,
+          snapshotDate: snapshotDate,
+        );
+        listResults.add(pluginResult);
+      }
+    } else {
+      // 플러그인 미등록 시 기존 FX 평가 로직 폴백 (하위 호환)
+      final step2 = await _step2FxRevaluation(periodId, snapshotDate);
+      listResults.add(step2);
+    }
 
     // ─────────────────────────────────────────────────────────────
     // 3단계: 세무조정 (S08a TaxRuleEngine 의존 — MVP: TODO stub)
@@ -618,19 +650,56 @@ class RunSettlement {
     required int netIncome,
   }) async {
     try {
-      // FiscalPeriods 테이블 — 결산 완료 상태 업데이트
-      // (현재 스키마에 isClosed 컬럼 없음 → TODO: 스키마 확장 또는 별도 저장소)
-      // MVP: 로그 기록으로 대체
-      // 실제 구현은 FiscalPeriodsDao 확장 후 처리 예정
+      // v2.0: SettlementSnapshots 테이블에 6종 스냅샷 저장
+      // BS/PL은 즉시 생성, CF/CE/TAX/RATIO는 ���당 UseCase 구현 후 확장
+      final listSavedTypes = <String>[];
+
+      // BS 스냅샷
+      final mapBs = await _queryService.buildTrialBalance(periodId);
+      await _db.into(_db.settlementSnapshots).insert(
+        SettlementSnapshotsCompanion(
+          periodId: Value(periodId),
+          snapshotType: const Value('BS'),
+          data: Value(_encodeJson(mapBs)),
+        ),
+      );
+      listSavedTypes.add('BS');
+
+      // PL 스냅샷
+      final plResult = await _generateIncomeStatement.execute(periodId: periodId);
+      await _db.into(_db.settlementSnapshots).insert(
+        SettlementSnapshotsCompanion(
+          periodId: Value(periodId),
+          snapshotType: const Value('PL'),
+          data: Value(_encodeJson({
+            'totalRevenue': plResult.totalRevenue,
+            'totalExpense': plResult.totalExpense,
+            'netIncome': plResult.netIncome,
+          })),
+        ),
+      );
+      listSavedTypes.add('PL');
+
+      // CF/CE/TAX/RATIO — 해당 UseCase 구현 후 여기에 추가
+      // TODO: GenerateCashFlowStatement → snapshotType='CF'
+      // TODO: GenerateEquityChangeStatement → snapshotType='CE'
+      // TODO: TaxRuleEngine 결과 → snapshotType='TAX'
+      // TODO: CalculateFinancialRatios 결과 → snapshotType='RATIO'
+
+      // FiscalPeriods.isClosed = true
+      await (_db.update(_db.fiscalPeriods)
+            ..where((fp) => fp.id.equals(periodId)))
+          .write(const FiscalPeriodsCompanion(isClosed: Value(true)));
 
       return SettlementStepResult(
         step: SettlementStep.savingSnapshot,
         isSuccess: true,
-        message: '결산 스냅샷 기록 완료 (periodId=$periodId, netIncome=$netIncome)',
+        message: '결산 스냅샷 ${listSavedTypes.join("/")} 저장 완료 (periodId=$periodId)',
         details: {
           'periodId': periodId,
           'snapshotDate': snapshotDate.toIso8601String(),
           'netIncome': netIncome,
+          'snapshotTypes': listSavedTypes,
         },
       );
     } catch (e) {
@@ -640,5 +709,19 @@ class RunSettlement {
         message: '스냅샷 저장 실패: $e',
       );
     }
+  }
+
+  /// JSON 인코딩 헬퍼
+  String _encodeJson(Map<String, dynamic> data) {
+    // dart:convert 미 import 시 간단 직렬화
+    final buffer = StringBuffer('{');
+    var isFirst = true;
+    for (final entry in data.entries) {
+      if (!isFirst) buffer.write(',');
+      buffer.write('"${entry.key}":${entry.value}');
+      isFirst = false;
+    }
+    buffer.write('}');
+    return buffer.toString();
   }
 }
