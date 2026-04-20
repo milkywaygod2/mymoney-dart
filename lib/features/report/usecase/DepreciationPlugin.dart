@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart';
 
 import '../../../core/constants/Enums.dart';
 import '../../../infrastructure/database/AppDatabase.dart';
@@ -30,13 +30,16 @@ class DepreciationPlugin implements SettlementPlugin {
   }) async {
     try {
       // 1. 유형/무형 자산 계정 조회 (감가상각 대상)
-      final listAssetAccounts = await (
-        _db.select(_db.accounts)
-          ..where((a) =>
-            a.equityTypePath.like('ASSET.NON_CURRENT.TANGIBLE.%') |
-            a.equityTypePath.like('ASSET.NON_CURRENT.INTANGIBLE.%'))
-          ..where((a) => a.isActive.equals(true))
+      final listAssetRows = await _db.customSelect(
+        'SELECT * FROM accounts WHERE is_active = 1 AND '
+        '(equity_type_path LIKE ? OR equity_type_path LIKE ?)',
+        variables: [
+          Variable.withString('ASSET.NON_CURRENT.TANGIBLE.%'),
+          Variable.withString('ASSET.NON_CURRENT.INTANGIBLE.%'),
+        ],
       ).get();
+      final listAssetAccounts = listAssetRows.map((row) =>
+        _db.accounts.map(row.data)).toList();
 
       if (listAssetAccounts.isEmpty) {
         return const SettlementStepResult(
