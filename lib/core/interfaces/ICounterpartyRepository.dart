@@ -1,4 +1,5 @@
 import '../models/TypedId.dart';
+import '../constants/Enums.dart';
 import '../domain/Counterparty.dart';
 
 /// Counterparty(거래처) 저장소 인터페이스.
@@ -18,4 +19,10 @@ abstract interface class ICounterpartyRepository {
 
   /// 별칭 유일성 검증 — INV-C3: 전체 거래처에서 별칭 중복 불가
   Future<bool> isAliasUnique(String alias);
+
+  /// 특수관계자 유형별 조회 (v2.0)
+  Future<List<Counterparty>> findByRelatedPartyType(RelatedPartyType type);
+
+  /// 특수관계자 전체 조회 — relatedPartyType != null (v2.0)
+  Future<List<Counterparty>> findRelatedParties();
 }

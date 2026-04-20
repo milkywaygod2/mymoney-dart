@@ -17,4 +17,10 @@ class Counterparties extends Table {
   TextColumn get counterpartyType => text().nullable()();
   /// 해외 확장 예약 (CRS/FATCA)
   TextColumn get countryCode => text().nullable()();
+
+  /// 특수관계자 5단계 분류 — parent|subsidiary|associate|affiliate|otherRelated (v2.0)
+  TextColumn get relatedPartyType => text().nullable()();
+
+  /// 법인/개인 성격 분류 — individual|domesticCorporate|foreignCorporate|nonprofit|government|affiliate (v2.0)
+  TextColumn get entityType => text().nullable()();
 }

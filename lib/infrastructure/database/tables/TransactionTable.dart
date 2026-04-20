@@ -15,7 +15,7 @@ class Transactions extends Table {
   IntColumn get counterpartyId => integer().nullable().references(Counterparties, #id)();
   /// 거래처명 비정규화 캐시 (기록시점 유지, 감사 추적)
   TextColumn get counterpartyName => text().nullable()();
-  /// MANUAL | OCR | CARD_API | CSV_IMPORT | NTS_IMPORT | SYSTEM_SETTLEMENT
+  /// MANUAL | OCR | CARD_API | CSV_IMPORT | NTS_IMPORT | SYSTEM_SETTLEMENT | SYSTEM_AUDIT_ADJUSTMENT
   TextColumn get source => text()();
   /// AI 분류 신뢰도 (0.0~1.0)
   RealColumn get confidence => real().nullable()();
@@ -25,4 +25,10 @@ class Transactions extends Table {
   TextColumn get syncStatus => text().withDefault(const Constant('SYNCED'))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  /// 외부 전표번호/카드승인번호 (v2.0)
+  TextColumn get referenceNo => text().nullable()();
+
+  /// 역분개 유형 — reversalOrigin|reversalEntry (v2.0)
+  TextColumn get reversalType => text().nullable()();
 }

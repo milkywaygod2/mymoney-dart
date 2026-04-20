@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../models/TypedId.dart';
+import '../constants/Enums.dart';
 import '../errors/DomainErrors.dart';
 import 'CounterpartyAlias.dart';
 
@@ -48,6 +49,12 @@ abstract class Counterparty with _$Counterparty {
     /// 국가 코드 (해외 확장 시)
     String? countryCode,
 
+    /// 특수관계자 5단계 분류 (v2.0)
+    RelatedPartyType? relatedPartyType,
+
+    /// 법인/개인 성격 분류 (v2.0)
+    EntityType? entityType,
+
     /// OCR 표기 변형 목록 ("스타벅스", "STARBUCKS" 등)
     @Default([]) List<CounterpartyAlias> listAliases,
   }) = _Counterparty;
@@ -64,6 +71,8 @@ abstract class Counterparty with _$Counterparty {
     bool? isRelatedParty,
     String? counterpartyType,
     String? countryCode,
+    RelatedPartyType? relatedPartyType,
+    EntityType? entityType,
     List<CounterpartyAlias> listAliases = const [],
   }) {
     if (name.isEmpty) {
@@ -72,6 +81,9 @@ abstract class Counterparty with _$Counterparty {
     if (identifier != null && identifierType == IdentifierType.none) {
       throw InvariantViolationError('INV-C2: 고유번호가 있으면 identifierType을 지정해야 합니다');
     }
+    // INV-C4: relatedPartyType이 지정되면 isRelatedParty는 자동 true
+    final bool? effectiveIsRelatedParty =
+        relatedPartyType != null ? true : isRelatedParty;
     return Counterparty._internal(
       id: id,
       name: name,
@@ -80,9 +92,11 @@ abstract class Counterparty with _$Counterparty {
       phone: phone,
       address: address,
       confidenceLevel: confidenceLevel,
-      isRelatedParty: isRelatedParty,
+      isRelatedParty: effectiveIsRelatedParty,
       counterpartyType: counterpartyType,
       countryCode: countryCode,
+      relatedPartyType: relatedPartyType,
+      entityType: entityType,
       listAliases: listAliases,
     );
   }

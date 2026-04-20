@@ -29,7 +29,8 @@ enum TransactionSource {
   cardApi,          // 카드사 API 연동
   csvImport,        // CSV/Excel 임포트
   ntsImport,        // 국세청(NTS) 데이터 임포트
-  systemSettlement, // 결산 자동 전표 (외환평가, 감가상각 등)
+  systemSettlement,       // 결산 자동 전표 (외환평가, 감가상각 등)
+  systemAuditAdjustment,  // 감사 수정분개 (v2.0)
 }
 
 /// 손금/익금 판정 — 세무조정 시 사용
@@ -82,3 +83,28 @@ const int kExchangeRateMultiplier = 1000000;
 
 /// 지분율 배율 — 100% = 10000, 33.33% = 3333
 const int kShareRatioMultiplier = 10000;
+
+/// 특수관계자 5단계 분류 (K-IFRS 1024 / 공정거래법) — v2.0
+enum RelatedPartyType {
+  parent,       // 지배기업
+  subsidiary,   // 종속기업 (과반수 지배)
+  associate,    // 관계기업 (20~50% 영향력)
+  affiliate,    // 기타특수관계자 (공정거래법 계열회사)
+  otherRelated, // 기타(*) (비영리재단, 공익법인)
+}
+
+/// 법인/개인 성격 분류 — v2.0
+enum EntityType {
+  individual,         // 개인
+  domesticCorporate,  // 국내 영리법인
+  foreignCorporate,   // 해외 영리법인
+  nonprofit,          // 비영리단체/재단
+  government,         // 정부/공공기관
+  affiliate,          // 관계사/계열사
+}
+
+/// 역분개 유형 구분 — v2.0
+enum ReversalType {
+  reversalOrigin, // 역분개대상 (원본 전표, 향후 취소 예정)
+  reversalEntry,  // 역분개처리 (취소 전표 본체)
+}

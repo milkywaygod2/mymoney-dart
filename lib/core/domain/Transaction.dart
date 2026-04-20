@@ -30,6 +30,10 @@ abstract class Transaction with _$Transaction {
     @Default([]) List<TagId> listTagIds,
     required DateTime createdAt,
     required DateTime updatedAt,
+    /// 외부 전표번호/카드승인번호 (v2.0)
+    String? referenceNo,
+    /// 역분개 유형 — reversalOrigin|reversalEntry (v2.0)
+    ReversalType? reversalType,
   }) = _Transaction;
 
   // ---------------------------------------------------------------------------
@@ -130,6 +134,7 @@ abstract class Transaction with _$Transaction {
     return copyWith(
       status: TransactionStatus.voided,
       voidedBy: reversalId,
+      reversalType: ReversalType.reversalOrigin,
       updatedAt: DateTime.now(),
     );
   }

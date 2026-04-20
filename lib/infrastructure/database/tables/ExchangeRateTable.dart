@@ -10,6 +10,6 @@ class ExchangeRates extends Table {
   DateTimeColumn get effectiveDate => dateTime()();
   /// 출처 (예: "한국은행", "서울외국환중개")
   TextColumn get source => text()();
-  /// 회계용/세무용 구분 (해외 확장 예약)
+  /// 환율 용도 구분: ACCOUNTING(범용) | TAX(세무) | AVERAGE(기간평균-P/L환산) | CLOSING(기말-B/S환산)
   TextColumn get purpose => text().withDefault(const Constant('ACCOUNTING'))();
 }
