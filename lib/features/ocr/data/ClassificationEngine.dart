@@ -5,7 +5,12 @@ import '../../../infrastructure/database/AppDatabase.dart';
 
 /// OCR 텍스트 → 계정과목/거래처 자동 매핑 결과
 class ClassificationResult {
+  /// 차변 계정 (비용/자산)
   final AccountId accountId;
+
+  /// 대변 계정 (부채/현금) — v2.0: 차대변 쌍 자동 결정
+  final AccountId? creditAccountId;
+
   final CounterpartyId? counterpartyId;
 
   /// 매칭 신뢰도 (0.0 ~ 1.0)
@@ -16,6 +21,7 @@ class ClassificationResult {
 
   const ClassificationResult({
     required this.accountId,
+    this.creditAccountId,
     this.counterpartyId,
     required this.confidence,
     required this.matchedRuleId,
@@ -52,6 +58,9 @@ class ClassificationEngine {
 
         return ClassificationResult(
           accountId: AccountId(rule.accountId),
+          creditAccountId: rule.creditAccountId != null
+              ? AccountId(rule.creditAccountId!)
+              : null,
           counterpartyId: rule.counterpartyId != null
               ? CounterpartyId(rule.counterpartyId!)
               : null,

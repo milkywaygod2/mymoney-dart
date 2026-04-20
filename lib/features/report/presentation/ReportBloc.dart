@@ -90,6 +90,9 @@ class DashboardSummary {
     required this.netIncome,
     required this.snapshotDate,
     this.pendingDraftCount = 0,
+    this.netAssetsChangeRatio,
+    this.revenueChangeRatio,
+    this.expenseChangeRatio,
   });
 
   /// 순자산 (자산 - 부채)
@@ -103,6 +106,11 @@ class DashboardSummary {
 
   /// 미확인 Draft 건수 — 대시보드 알림 배너용
   final int pendingDraftCount;
+
+  /// 전월 대비 변동율 (배율 10000, 525 = +5.25%) — v2.0 ComparePeriods 연동 후 활성화
+  final int? netAssetsChangeRatio;
+  final int? revenueChangeRatio;
+  final int? expenseChangeRatio;
 }
 
 class ReportState {

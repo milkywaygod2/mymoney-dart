@@ -47,11 +47,12 @@ class DashboardPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // 순자산 카드
+              // 순자산 카드 + 전월 대비
               _SummaryCard(
                 label: '순자산',
                 amount: d.netAssets,
                 color: Theme.of(context).colorScheme.primary,
+                changeRatio: d.netAssetsChangeRatio,
               ),
               const SizedBox(height: 12),
               // 수입/지출 행
@@ -62,6 +63,7 @@ class DashboardPage extends StatelessWidget {
                       label: '수입',
                       amount: d.totalRevenue,
                       color: Colors.green,
+                      changeRatio: d.revenueChangeRatio,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -70,6 +72,7 @@ class DashboardPage extends StatelessWidget {
                       label: '지출',
                       amount: d.totalExpense,
                       color: Colors.red,
+                      changeRatio: d.expenseChangeRatio,
                     ),
                   ),
                 ],
@@ -104,11 +107,14 @@ class _SummaryCard extends StatelessWidget {
     required this.label,
     required this.amount,
     required this.color,
+    this.changeRatio,
   });
 
   final String label;
   final int amount;
   final Color color;
+  /// 전월 대비 변동율 (배율 10000, 예: 525 = +5.25%). null이면 미표시.
+  final int? changeRatio;
 
   @override
   Widget build(BuildContext context) {
@@ -118,8 +124,14 @@ class _SummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(label,
+                    style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+                if (changeRatio != null) _buildChangeChip(),
+              ],
+            ),
             const SizedBox(height: 4),
             Text(
               '₩${_formatAmount(amount)}',
@@ -129,6 +141,31 @@ class _SummaryCard extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 전월 대비 ±% 칩 위젯
+  Widget _buildChangeChip() {
+    final ratio = changeRatio!;
+    final isPositive = ratio >= 0;
+    final pct = (ratio / 100).toStringAsFixed(1);
+    final sign = isPositive ? '+' : '';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isPositive
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '$sign$pct%',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: isPositive ? Colors.green : Colors.red,
         ),
       ),
     );

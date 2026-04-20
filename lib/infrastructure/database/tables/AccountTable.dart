@@ -42,4 +42,6 @@ class Accounts extends Table {
   BoolColumn get isFxRevalTarget => boolean().withDefault(const Constant(false))();
   /// 거래처 입력 강제 수준: notSet | optional | required
   TextColumn get vendorRequirement => text().nullable()();
+  /// 매출차감 계정 플래그 — 순액 표시 수수료 (INV-A6: nature == EXPENSE만 가능)
+  BoolColumn get isRevenueDeduction => boolean().withDefault(const Constant(false))();
 }

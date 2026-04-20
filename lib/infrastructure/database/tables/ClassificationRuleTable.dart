@@ -11,7 +11,10 @@ class ClassificationRules extends Table {
   TextColumn get pattern => text()();
   /// EXACT | CONTAINS | REGEX
   TextColumn get patternType => text()();
+  /// 차변 계정 (비용/자산 — 자동 배정 대상)
   IntColumn get accountId => integer().references(Accounts, #id)();
+  /// 대변 계정 (부채/현금 — 차대변 쌍 자동 결정, v2.0)
+  IntColumn get creditAccountId => integer().nullable().references(Accounts, #id)();
   IntColumn get counterpartyId => integer().nullable().references(Counterparties, #id)();
   /// 우선순위 (높을수록 우선, 사용자 규칙 > 시스템 규칙)
   IntColumn get priority => integer().withDefault(const Constant(0))();
