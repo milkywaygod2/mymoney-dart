@@ -58,6 +58,8 @@ class TransactionRepository implements ITransactionRepository {
       syncStatus: Value(transaction.syncStatus.name.toUpperCase()),
       createdAt: Value(transaction.createdAt),
       updatedAt: Value(transaction.updatedAt),
+      referenceNo: Value(transaction.referenceNo),
+      reversalType: Value(transaction.reversalType?.name),
     );
 
     final listLineCompanions = transaction.listLines.map((jel) {
@@ -173,6 +175,17 @@ class TransactionRepository implements ITransactionRepository {
       listTagIds: result.listTagIds.map((id) => TagId(id)).toList(),
       createdAt: tx.createdAt,
       updatedAt: tx.updatedAt,
+      referenceNo: tx.referenceNo,
+      reversalType: tx.reversalType != null
+          ? ReversalType.values.byName(tx.reversalType!)
+          : null,
     );
+  }
+
+  /// 외부 참조번호(카드승인번호 등)로 거래 조회 (v2.0)
+  Future<Transaction?> findByReferenceNo(String referenceNo) async {
+    final result = await _dao.findByReferenceNo(referenceNo);
+    if (result == null) return null;
+    return _toDomain(result);
   }
 }

@@ -20,7 +20,8 @@ class DeductibilityRule {
 ///   1. 계정명 키워드 매칭 (정확 포함 순서)
 ///   2. 매칭 불가 → Deductibility.undetermined 유지
 ///
-/// 특수관계자 거래, 부당행위계산, 대손충당금은 자동 판정 불가 → 미판정 유지.
+/// 특수관계자 거래, 부당행위계산은 자동 판정 불가 → 미판정 유지.
+/// v2.0: 대손충당금은 자동 판정 대상으로 승격 (법인세법 §34, LegalParameter 설정율 한도).
 class TaxRuleEngine {
   const TaxRuleEngine();
 
@@ -95,6 +96,12 @@ class TaxRuleEngine {
       deductibility: Deductibility.nonDeductible,
       reason: '법인세법 제21조 — 법인세 등 손금불산입',
     ),
+    // v2.0 추가: 손금산입(한도) — 대손충당금
+    _TaxRule(
+      keywords: ['대손충당', '대손상각', '대손'],
+      deductibility: Deductibility.deductibleLimited,
+      reason: '법인세법 제34조 — 대손충당금 설정율 한도 (LegalParameter 참조)',
+    ),
   ];
 
   // ---------------------------------------------------------------------------
@@ -102,7 +109,7 @@ class TaxRuleEngine {
   // ---------------------------------------------------------------------------
 
   static const List<String> _listUndeterminedKeywords = [
-    '특수관계', '부당행위', '대손충당', '채권', '대여금', '가지급금',
+    '특수관계', '부당행위', '가지급금',
   ];
 
   // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 
+import '../../../core/constants/Enums.dart';
 import '../../../core/interfaces/ICounterpartyRepository.dart';
 import '../../../core/domain/Counterparty.dart' as domain_cp;
 import '../../../core/domain/CounterpartyAlias.dart' as domain_alias;
@@ -52,6 +53,8 @@ class CounterpartyRepository implements ICounterpartyRepository {
           isRelatedParty: Value(counterparty.isRelatedParty),
           counterpartyType: Value(counterparty.counterpartyType),
           countryCode: Value(counterparty.countryCode),
+          relatedPartyType: Value(counterparty.relatedPartyType?.name),
+          entityType: Value(counterparty.entityType?.name),
         ),
       );
     } else {
@@ -72,6 +75,8 @@ class CounterpartyRepository implements ICounterpartyRepository {
           isRelatedParty: Value(counterparty.isRelatedParty),
           counterpartyType: Value(counterparty.counterpartyType),
           countryCode: Value(counterparty.countryCode),
+          relatedPartyType: Value(counterparty.relatedPartyType?.name),
+          entityType: Value(counterparty.entityType?.name),
         ),
       );
     }
@@ -80,6 +85,19 @@ class CounterpartyRepository implements ICounterpartyRepository {
   @override
   Future<bool> isAliasUnique(String alias) {
     return _dao.isAliasUnique(alias);
+  }
+
+  @override
+  Future<List<domain_cp.Counterparty>> findByRelatedPartyType(
+      RelatedPartyType type) async {
+    final listRows = await _dao.findByRelatedPartyType(type.name);
+    return listRows.map(_toDomain).toList();
+  }
+
+  @override
+  Future<List<domain_cp.Counterparty>> findRelatedParties() async {
+    final listRows = await _dao.findRelatedParties();
+    return listRows.map(_toDomain).toList();
   }
 
   // ---------------------------------------------------------------------------
@@ -104,6 +122,12 @@ class CounterpartyRepository implements ICounterpartyRepository {
       isRelatedParty: c.isRelatedParty,
       counterpartyType: c.counterpartyType,
       countryCode: c.countryCode,
+      relatedPartyType: c.relatedPartyType != null
+          ? RelatedPartyType.values.byName(c.relatedPartyType!)
+          : null,
+      entityType: c.entityType != null
+          ? EntityType.values.byName(c.entityType!)
+          : null,
       listAliases: row.listAliases
           .map(
             (a) => domain_alias.CounterpartyAlias(

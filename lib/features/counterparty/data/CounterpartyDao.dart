@@ -145,6 +145,31 @@ class CounterpartyDao extends DatabaseAccessor<AppDatabase>
   // 내부 헬퍼
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // v2.0 특수관계자 조회
+  // ---------------------------------------------------------------------------
+
+  /// 특수관계자 유형별 조회
+  Future<List<CounterpartyWithAliases>> findByRelatedPartyType(
+      String type) async {
+    final listRows = await (select(counterparties)
+          ..where((c) => c.relatedPartyType.equals(type)))
+        .get();
+    return Future.wait(listRows.map(_attachAliases));
+  }
+
+  /// 특수관계자 전체 조회 — relatedPartyType이 null이 아닌 모든 거래처
+  Future<List<CounterpartyWithAliases>> findRelatedParties() async {
+    final listRows = await (select(counterparties)
+          ..where((c) => c.relatedPartyType.isNotNull()))
+        .get();
+    return Future.wait(listRows.map(_attachAliases));
+  }
+
+  // ---------------------------------------------------------------------------
+  // 내부 헬퍼
+  // ---------------------------------------------------------------------------
+
   /// 거래처 row에 alias 목록을 붙여 CounterpartyWithAliases로 변환
   Future<CounterpartyWithAliases> _attachAliases(Counterparty row) async {
     final listAliases = await findAliasesOf(row.id);

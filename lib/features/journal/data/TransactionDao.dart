@@ -169,6 +169,15 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
     return mapBalances;
   }
 
+  /// 외부 참조번호(카드승인번호 등)로 거래 조회 (v2.0)
+  Future<TransactionWithLines?> findByReferenceNo(String referenceNo) async {
+    final txRow = await (select(transactions)
+          ..where((t) => t.referenceNo.equals(referenceNo)))
+        .getSingleOrNull();
+    if (txRow == null) return null;
+    return _buildTransactionWithLines(txRow);
+  }
+
   /// 내부: 거래 row에서 JEL + 태그를 조합하여 TransactionWithLines 생성
   Future<TransactionWithLines> _buildTransactionWithLines(
     Transaction txRow,
