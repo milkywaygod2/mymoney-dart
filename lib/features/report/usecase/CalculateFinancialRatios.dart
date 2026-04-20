@@ -49,17 +49,17 @@ class CalculateFinancialRatios {
     final netAssetsPrevious = previousAssets - _sumByNature(mapBsPrevious, AccountNature.liability);
 
     // --- P/L Rolling 12M 조회 ---
-    final mapPl = await _queryService.calculateIncomeStatement(periodId: periodId);
-    final totalRevenue = _sumByNature(mapPl, AccountNature.revenue);
-    final totalExpense = _sumByNature(mapPl, AccountNature.expense);
+    final listPl = await _queryService.calculateIncomeStatement(periodId: periodId);
+    final totalRevenue = _sumPlByNature(listPl, AccountNature.revenue);
+    final totalExpense = _sumPlByNature(listPl, AccountNature.expense);
     final netIncome = totalRevenue - totalExpense;
 
     // 이자비용 (path 기반)
-    final interestExpense = _sumByPath(mapPl, 'EXPENSE.FINANCIAL').abs();
+    final interestExpense = _sumPlByPath(listPl, 'EXPENSE.FINANCIAL').abs();
     // 영업이익 (매출 - 영업비용, 금융/기타 제외)
-    final operatingExpense = _sumByPath(mapPl, 'EXPENSE.LIVING') +
-        _sumByPath(mapPl, 'EXPENSE.OPERATING') +
-        _sumByPath(mapPl, 'EXPENSE.DEPRECIATION');
+    final operatingExpense = _sumPlByPath(listPl, 'EXPENSE.LIVING') +
+        _sumPlByPath(listPl, 'EXPENSE.OPERATING') +
+        _sumPlByPath(listPl, 'EXPENSE.DEPRECIATION');
     final operatingIncome = totalRevenue - operatingExpense;
 
     // 평균값 (T + T-12) / 2
@@ -191,7 +191,7 @@ class CalculateFinancialRatios {
     ));
 
     // 13. 기부금비율 = 기부금 / 매출
-    final donations = _sumByPath(mapPl, 'EXPENSE.OTHER').abs();
+    final donations = _sumPlByPath(listPl, 'EXPENSE.OTHER').abs();
     listRatios.add(_buildRatio(
       code: 'DONATION_RATIO',
       category: RatioCategory.activity,
@@ -217,6 +217,20 @@ class CalculateFinancialRatios {
     return list
         .where((e) => e.equityTypePath.startsWith(pathPrefix))
         .fold(0, (sum, e) => sum + e.balance);
+  }
+
+  /// P/L nature별 금액 합산 (IncomeStatementEntry 용)
+  int _sumPlByNature(List<IncomeStatementEntry> list, AccountNature nature) {
+    return list
+        .where((e) => e.nature == nature)
+        .fold(0, (sum, e) => sum + e.amount);
+  }
+
+  /// P/L path prefix별 금액 합산 (IncomeStatementEntry 용)
+  int _sumPlByPath(List<IncomeStatementEntry> list, String pathPrefix) {
+    return list
+        .where((e) => e.equityTypePath.startsWith(pathPrefix))
+        .fold(0, (sum, e) => sum + e.amount);
   }
 
   /// FinancialRatio 생성 (0으로 나누기 방어)

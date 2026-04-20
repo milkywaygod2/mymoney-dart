@@ -55,12 +55,12 @@ class ComparePeriods {
 
     final mapPrevious = <String, int>{};
     for (final entry in listPrevious) {
-      mapPrevious[entry.equityTypePath] = (mapPrevious[entry.equityTypePath] ?? 0) + entry.balance;
+      mapPrevious[entry.equityTypePath] = (mapPrevious[entry.equityTypePath] ?? 0) + entry.amount;
     }
 
     final mapCurrent = <String, int>{};
     for (final entry in listCurrent) {
-      mapCurrent[entry.equityTypePath] = (mapCurrent[entry.equityTypePath] ?? 0) + entry.balance;
+      mapCurrent[entry.equityTypePath] = (mapCurrent[entry.equityTypePath] ?? 0) + entry.amount;
     }
 
     final setPaths = {...mapCurrent.keys, ...mapPrevious.keys};

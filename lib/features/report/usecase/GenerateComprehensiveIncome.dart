@@ -62,9 +62,9 @@ class GenerateComprehensiveIncome {
     int totalExpense = 0;
     for (final entry in listPl) {
       if (entry.equityTypePath.startsWith('REVENUE')) {
-        totalRevenue += entry.balance;
+        totalRevenue += entry.amount;
       } else if (entry.equityTypePath.startsWith('EXPENSE')) {
-        totalExpense += entry.balance;
+        totalExpense += entry.amount;
       }
     }
     final netIncome = totalRevenue - totalExpense;

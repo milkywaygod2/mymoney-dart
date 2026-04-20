@@ -42,7 +42,10 @@ import '../../features/report/data/ReportQueryService.dart';
 import '../../features/journal/presentation/JournalEvent.dart';
 import '../../features/report/presentation/ReportBloc.dart';
 import '../../features/tax/presentation/TaxEvent.dart';
+import '../../features/report/usecase/CalculateFinancialRatios.dart';
+import '../../features/report/usecase/ComparePeriods.dart';
 import '../../features/report/usecase/GenerateBalanceSheet.dart';
+import '../../features/report/usecase/GenerateComprehensiveIncome.dart';
 import '../../features/report/usecase/GenerateIncomeStatement.dart';
 import '../../features/report/usecase/RunSettlement.dart';
 import '../../features/sync/data/ConnectivityMonitor.dart'
@@ -221,12 +224,25 @@ Future<void> configureDependencies() async {
       autoClassifyDeductibility: getIt<AutoClassifyDeductibility>(),
     ),
   );
+  // v2.0: 비율/OCI/기간비교 UseCase 등록
+  getIt.registerLazySingleton<CalculateFinancialRatios>(
+    () => CalculateFinancialRatios(getIt<ReportQueryService>()),
+  );
+  getIt.registerLazySingleton<GenerateComprehensiveIncome>(
+    () => GenerateComprehensiveIncome(getIt<ReportQueryService>()),
+  );
+  getIt.registerLazySingleton<ComparePeriods>(
+    () => ComparePeriods(getIt<ReportQueryService>()),
+  );
   getIt.registerSingleton<ReportBloc>(
     ReportBloc(
       generateBalanceSheet: getIt<GenerateBalanceSheet>(),
       generateIncomeStatement: getIt<GenerateIncomeStatement>(),
       runSettlement: getIt<RunSettlement>(),
       queryService: getIt<ReportQueryService>(),
+      calculateFinancialRatios: getIt<CalculateFinancialRatios>(),
+      generateComprehensiveIncome: getIt<GenerateComprehensiveIncome>(),
+      comparePeriods: getIt<ComparePeriods>(),
     ),
   );
   getIt.registerSingleton<OcrBloc>(
